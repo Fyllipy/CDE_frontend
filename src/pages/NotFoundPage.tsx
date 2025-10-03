@@ -5,8 +5,8 @@ export function NotFoundPage() {
   return (
     <div className="not-found">
       <h1>404</h1>
-      <p>Não encontramos o que você procura.</p>
-      <Link className="btn" to="/">Voltar ao início</Link>
+      <p>NÃ£o encontramos o que vocÃª procura.</p>
+      <Link className="btn" to="/">Voltar ao inï¿½cio</Link>
     </div>
   );
 }

@@ -8,7 +8,7 @@ export function AuthLayout() {
         <div className="auth-header">
           <span className="brand-mark">CDE</span>
           <h1>Ambiente Comum de Dados</h1>
-          <p>Faça login para acessar os seus projetos e colaborar com a equipe.</p>
+          <p>FaÃ§a login para acessar os seus projetos e colaborar com a equipe.</p>
         </div>
         <Outlet />
       </div>

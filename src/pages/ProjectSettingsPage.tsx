@@ -33,7 +33,7 @@ export function ProjectSettingsPage() {
         }
       } catch (err) {
         if (active) {
-          setError('Não foi possível carregar as configurações do projeto.');
+          setError('NÃ£o foi possÃ­vel carregar as configuraÃ§Ãµes do projeto.');
         }
       } finally {
         if (active) {
@@ -56,7 +56,7 @@ export function ProjectSettingsPage() {
     try {
       await updateNamingStandard(projectId, pattern);
     } catch (err) {
-      setError('Não foi possível salvar o padrão de nomenclatura.');
+      setError('NÃ£o foi possÃ­vel salvar o padrÃ£o de nomenclatura.');
     } finally {
       setPatternSaving(false);
     }
@@ -78,7 +78,7 @@ export function ProjectSettingsPage() {
       setNewMemberId('');
       setNewMemberRole('MEMBER');
     } catch (err) {
-      setError('Não foi possível adicionar o membro. Verifique o identificador informado.');
+      setError('NÃ£o foi possÃ­vel adicionar o membro. Verifique o identificador informado.');
     } finally {
       setMemberSaving(false);
     }
@@ -90,13 +90,13 @@ export function ProjectSettingsPage() {
   }
 
   if (loading) {
-    return <div className="card">Carregando configurações...</div>;
+    return <div className="card">Carregando configuraÃ§Ãµes...</div>;
   }
 
   if (!isManager) {
     return (
       <div className="card">
-        <p>Somente gestores do projeto podem acessar esta página.</p>
+        <p>Somente gestores do projeto podem acessar esta pÃ¡gina.</p>
         <button className="btn" onClick={() => navigate(-1)}>Voltar</button>
       </div>
     );
@@ -104,16 +104,16 @@ export function ProjectSettingsPage() {
 
   return (
     <div className="settings card">
-      <h2>Configurações do Projeto</h2>
+      <h2>ConfiguraÃ§Ãµees do Projeto</h2>
       {project && <p className="subtitle">{project.name}</p>}
-      <p className="subtitle">Gerencie o padrão de nomenclatura e o acesso dos membros.</p>
+      <p className="subtitle">Gerencie o padrÃ£o de nomenclatura e o acesso dos membros.</p>
       {error && <p className="form-error">{error}</p>}
 
       <section className="settings-section">
-        <h3>Padrão de Nomenclatura</h3>
+        <h3>PadrÃ£o de Nomenclatura</h3>
         <form className="grid" onSubmit={handlePatternUpdate}>
           <div className="field">
-            <label className="label" htmlFor="pattern">Definição do padrão</label>
+            <label className="label" htmlFor="pattern">DefiniÃ§Ã£o do padrï¿½o</label>
             <input
               id="pattern"
               className="input"
@@ -122,11 +122,11 @@ export function ProjectSettingsPage() {
               placeholder="{disciplina}-{tipo}-{sequencia}"
               required
             />
-            <span className="hint">Utilize chaves para campos variáveis e hífens para separação.</span>
+            <span className="hint">Utilize chaves para campos variÃ¡veis e hfens para separaÃ§Ã£o.</span>
           </div>
           <div className="form-actions">
             <button className="btn" type="submit" disabled={patternSaving}>
-              {patternSaving ? 'Salvando...' : 'Salvar padrão'}
+              {patternSaving ? 'Salvando...' : 'Salvar padrï¿½o'}
             </button>
           </div>
         </form>
@@ -136,13 +136,13 @@ export function ProjectSettingsPage() {
         <h3>Membros do Projeto</h3>
         <form className="member-form" onSubmit={handleAddMember}>
           <div className="field">
-            <label className="label" htmlFor="member-id">Identificador do usuário</label>
+            <label className="label" htmlFor="member-id">Identificador do usuï¿½rio</label>
             <input
               id="member-id"
               className="input"
               value={newMemberId}
               onChange={(event) => setNewMemberId(event.target.value)}
-              placeholder="UUID do usuário"
+              placeholder="UUID do usuï¿½rio"
               required
             />
           </div>
@@ -166,7 +166,7 @@ export function ProjectSettingsPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>Usuário</th>
+              <th>UsuÃ¡rio</th>
               <th>Papel</th>
               <th>Desde</th>
               <th></th>

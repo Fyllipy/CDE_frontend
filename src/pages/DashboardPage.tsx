@@ -23,7 +23,7 @@ export function DashboardPage() {
           setProjects(data);
         }
       } catch (err) {
-        setError('Não foi possível carregar os projetos.');
+        setError('NÃ£o foi possÃ­vel carregar os projetos.');
       } finally {
         if (active) {
           setLoading(false);
@@ -50,7 +50,7 @@ export function DashboardPage() {
       setDescription('');
       setShowForm(false);
     } catch (err) {
-      setError('Não foi possível criar o projeto.');
+      setError('NÃ£o foi possÃ­vel criar o projeto.');
     } finally {
       setSubmitting(false);
     }
@@ -65,7 +65,7 @@ export function DashboardPage() {
       <div className="flex-between">
         <div>
           <h2>Meus Projetos</h2>
-          <p className="subtitle">Ambientes de colaboração onde você possui acesso.</p>
+          <p className="subtitle">Ambientes de colaboraÃ§Ã£o onde vocÃª possui acesso.</p>
         </div>
         <button className="btn" onClick={() => setShowForm((value) => !value)}>
           {showForm ? 'Cancelar' : 'Novo Projeto'}
@@ -88,7 +88,7 @@ export function DashboardPage() {
             />
           </div>
           <div className="field">
-            <label className="label" htmlFor="project-description">Descrição</label>
+            <label className="label" htmlFor="project-description">DescriÃ§Ã£o</label>
             <textarea
               id="project-description"
               className="input"
@@ -119,7 +119,7 @@ export function DashboardPage() {
         {!projects.length && !showForm && (
           <div className="card empty-state">
             <h3>Comece criando um projeto</h3>
-            <p>Configure o padrão de nomenclatura, convide a equipe e centralize arquivos e tarefas.</p>
+            <p>Configure o padrÃ£o de nomenclatura, convide a equipe e centralize arquivos e tarefas.</p>
             <button className="btn" onClick={() => setShowForm(true)}>Criar primeiro projeto</button>
           </div>
         )}

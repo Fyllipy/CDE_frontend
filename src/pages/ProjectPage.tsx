@@ -30,7 +30,7 @@ export function ProjectPage() {
         }
       } catch (err) {
         if (active) {
-          setError('Não foi possível carregar os dados do projeto.');
+          setError('NÃ£o foi possÃ­vel carregar os dados do projeto.');
         }
       } finally {
         if (active) {
@@ -62,7 +62,7 @@ export function ProjectPage() {
   }
 
   if (error || !project || !membership) {
-    return <div className="card error">{error ?? 'Projeto não encontrado.'}</div>;
+    return <div className="card error">{error ?? 'Projeto nï¿½o encontrado.'}</div>;
   }
 
   const isManager = membership.role === 'MANAGER';
@@ -80,7 +80,7 @@ export function ProjectPage() {
         </div>
         {isManager && (
           <Link className="btn secondary" to={`/projects/${projectId}/settings`}>
-            Configurações do projeto
+            ConfiguraÃ§Ãµes do projeto
           </Link>
         )}
       </header>

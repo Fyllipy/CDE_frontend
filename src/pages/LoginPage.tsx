@@ -29,7 +29,7 @@ export function LoginPage() {
       await login(email, password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError('N„o foi possÌvel entrar. Verifique as credenciais.');
+      setError('N√£o foi poss√≠vel entrar. Verifique as credenciais.');
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ export function LoginPage() {
         {loading ? 'Entrando...' : 'Entrar'}
       </button>
       <p className="form-footer">
-        Ainda n„o tem acesso? <Link to="/register">Crie sua conta</Link>
+        Ainda n√£o tem acesso? <Link to="/register">Crie sua conta</Link>
       </p>
     </form>
   );

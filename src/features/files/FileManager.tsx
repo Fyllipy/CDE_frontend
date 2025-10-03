@@ -134,7 +134,7 @@ export function FileManager({ projectId, namingPattern, canUpload, userDirectory
       <div className="file-manager-header">
         <div>
           <h3>Arquivos do projeto</h3>
-          <p>{flattenedRevisions} revisoes registradas</p>
+          <p>{flattenedRevisions} revisões registradas</p>
         </div>
         {canUpload && (
           <button className="btn" onClick={() => setUploadOpen(true)}>Enviar arquivo</button>
@@ -155,9 +155,9 @@ export function FileManager({ projectId, namingPattern, canUpload, userDirectory
                 <thead>
                   <tr>
                     <th>Documento</th>
-                    <th>Revisao Atual</th>
+                    <th>Revisão Atual</th>
                     <th>Atualizado em</th>
-                    <th>Acoes</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -168,7 +168,7 @@ export function FileManager({ projectId, namingPattern, canUpload, userDirectory
                         <td>
                           <div className="file-name">{file.baseName}.{file.extension}</div>
                           <details className="revision-list">
-                            <summary>Historico ({file.revisions.length})</summary>
+                            <summary>Histórico ({file.revisions.length})</summary>
                             <ul>
                               {file.revisions.map((revision) => {
                                 const author = userDirectory[revision.uploadedById];
@@ -220,7 +220,7 @@ export function FileManager({ projectId, namingPattern, canUpload, userDirectory
       </div>
 
       {canUpload && (
-        <p className="info-text">Padrao de nomenclatura ativo: <strong>{namingPattern ?? 'Nao configurado'}</strong></p>
+        <p className="info-text">Padrão de nomenclatura ativo: <strong>{namingPattern ?? 'Não configurado'}</strong></p>
       )}
 
       <FileUploadModal

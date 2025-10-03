@@ -103,7 +103,7 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
       <div className="modal-card">
         <div className="modal-header">
           <h3>Novo upload</h3>
-          <button className="close-button" onClick={onClose} aria-label="Fechar modal">�</button>
+          <button className="close-button" onClick={onClose} aria-label="Fechar modal">�</button>
         </div>
         <form className="modal-body" onSubmit={handleSubmit}>
           <div className="field">
@@ -120,7 +120,7 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
 
           {patternSegments.length > 0 && (
             <div className="pattern-builder">
-              <p className="pattern-info">Preencha o padrao configurado para o projeto:</p>
+              <p className="pattern-info">Preencha o padrão configurado para o projeto:</p>
               <div className="pattern-grid">
                 {patternSegments.map((segment) => (
                   segment.type === 'placeholder' ? (
@@ -140,7 +140,7 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
                 ))}
               </div>
               <div className="preview">
-                <span>Pre-visualizacao:</span>
+                <span>Pré-visualizacao:</span>
                 <strong>{composedBaseName || '...'}</strong>
               </div>
             </div>

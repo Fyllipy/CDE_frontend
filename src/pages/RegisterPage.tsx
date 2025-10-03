@@ -21,7 +21,7 @@ export function RegisterPage() {
       await register(name, email, password);
       navigate('/', { replace: true });
     } catch (err) {
-      setError('Não foi possível criar a conta. Tente novamente.');
+      setError('NÃ£o foi possÃ­vel criar a conta. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -41,7 +41,7 @@ export function RegisterPage() {
         />
       </div>
       <div className="field">
-        <label className="label" htmlFor="email">E-mail corporativo</label>
+        <label className="label" htmlFor="email">E-mail</label>
         <input
           id="email"
           className="input"
@@ -69,7 +69,7 @@ export function RegisterPage() {
         {loading ? 'Criando conta...' : 'Criar conta'}
       </button>
       <p className="form-footer">
-        Já possui acesso? <Link to="/login">Entre por aqui</Link>
+        JÃ¡ possui acesso? <Link to="/login">Entre por aqui</Link>
       </p>
     </form>
   );
