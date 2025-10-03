@@ -13,17 +13,21 @@
   background: #f1f5f9;
   border-radius: 12px;
   padding: 1rem;
-  width: 280px;
+  width: 300px;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  box-shadow: inset 0 0 0 1px #e2e8f0;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  border-top: 6px solid #2563eb;
 }
 
 .column-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
 }
 
 .column-title {
@@ -34,6 +38,12 @@
   font-size: 1rem;
 }
 
+.column-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .card-stack {
   display: grid;
   gap: 0.75rem;
@@ -41,20 +51,29 @@
 }
 
 .kanban-card {
-  background: #fff;
   border-radius: 10px;
   padding: 0.75rem;
   display: grid;
-  gap: 0.5rem;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  gap: 0.6rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
 }
 
 .card-title {
   border: none;
   resize: vertical;
   min-height: 48px;
-  font-weight: 500;
+  font-weight: 600;
   background: transparent;
+}
+
+.card-comment {
+  border: none;
+  resize: vertical;
+  min-height: 40px;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  padding: 0.4rem 0.5rem;
 }
 
 .card-actions {
@@ -64,18 +83,48 @@
   font-size: 0.8rem;
 }
 
-.add-card,
-.new-column {
+.card-tools {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
 }
 
+.add-card,
 .new-column {
+  display: grid;
+  gap: 0.5rem;
   background: #e2e8f0;
   border-radius: 12px;
-  padding: 1rem;
-  min-width: 240px;
+  padding: 0.85rem;
+}
+
+.add-card textarea.input {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.add-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.color-picker-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.color-input {
+  border: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
 }
 
 .link-button {

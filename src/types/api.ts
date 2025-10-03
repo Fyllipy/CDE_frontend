@@ -52,6 +52,7 @@ export type KanbanColumn = {
   projectId: string;
   name: string;
   position: number;
+  color: string;
   createdAt: string;
   updatedAt: string;
   cards: KanbanCard[];
@@ -63,6 +64,7 @@ export type KanbanCard = {
   projectId: string;
   title: string;
   description: string | null;
+  color: string | null;
   position: number;
   createdAt: string;
   updatedAt: string;

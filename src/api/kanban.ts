@@ -6,13 +6,13 @@ export async function fetchBoard(projectId: string): Promise<KanbanColumn[]> {
   return response.data.board;
 }
 
-export async function createColumn(projectId: string, name: string): Promise<KanbanColumn> {
-  const response = await api.post<{ column: KanbanColumn }>(`/projects/${projectId}/kanban/columns`, { name });
+export async function createColumn(projectId: string, payload: { name: string; color?: string }): Promise<KanbanColumn> {
+  const response = await api.post<{ column: KanbanColumn }>(`/projects/${projectId}/kanban/columns`, payload);
   return response.data.column;
 }
 
-export async function renameColumn(projectId: string, columnId: string, name: string): Promise<KanbanColumn | undefined> {
-  const response = await api.put<{ column?: KanbanColumn }>(`/projects/${projectId}/kanban/columns/${columnId}`, { name });
+export async function updateColumn(projectId: string, columnId: string, payload: { name?: string; color?: string }): Promise<KanbanColumn | undefined> {
+  const response = await api.put<{ column?: KanbanColumn }>(`/projects/${projectId}/kanban/columns/${columnId}`, payload);
   return response.data.column;
 }
 
@@ -20,12 +20,12 @@ export async function deleteColumn(projectId: string, columnId: string): Promise
   await api.delete(`/projects/${projectId}/kanban/columns/${columnId}`);
 }
 
-export async function createCard(projectId: string, columnId: string, payload: { title: string; description?: string }): Promise<KanbanCard> {
+export async function createCard(projectId: string, columnId: string, payload: { title: string; description?: string; color?: string | null }): Promise<KanbanCard> {
   const response = await api.post<{ card: KanbanCard }>(`/projects/${projectId}/kanban/columns/${columnId}/cards`, payload);
   return response.data.card;
 }
 
-export async function updateCard(projectId: string, cardId: string, payload: { title?: string; description?: string | null }): Promise<KanbanCard | undefined> {
+export async function updateCard(projectId: string, cardId: string, payload: { title?: string; description?: string | null; color?: string | null }): Promise<KanbanCard | undefined> {
   const response = await api.put<{ card?: KanbanCard }>(`/projects/${projectId}/kanban/cards/${cardId}`, payload);
   return response.data.card;
 }

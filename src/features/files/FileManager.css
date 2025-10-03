@@ -15,6 +15,31 @@
   font-size: 0.9rem;
 }
 
+.file-groups {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.file-group {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+}
+
+.file-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.file-group-header h4 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
 .file-list {
   overflow-x: auto;
 }
