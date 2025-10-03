@@ -1,0 +1,16 @@
+.not-found {
+  min-height: 60vh;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 1rem;
+}
+
+.not-found h1 {
+  font-size: 3rem;
+  margin: 0;
+}
+
+.not-found p {
+  color: #64748b;
+}

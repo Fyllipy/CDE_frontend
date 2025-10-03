@@ -1,0 +1,41 @@
+.settings {
+  display: grid;
+  gap: 2rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #64748b;
+}
+
+.settings-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.member-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.member-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.member-info span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}

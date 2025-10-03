@@ -1,0 +1,51 @@
+.auth-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: radial-gradient(circle at top, rgba(59, 130, 246, 0.18), transparent 55%),
+              radial-gradient(circle at bottom, rgba(67, 56, 202, 0.16), transparent 55%),
+              #f8fafc;
+}
+
+.auth-card {
+  width: min(440px, 100%);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12);
+}
+
+.auth-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-header h1 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.auth-header p {
+  margin: 0;
+  color: #475569;
+}
+
+.auth-card .brand-mark {
+  margin: 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #2563eb, #8b5cf6);
+  color: #fff;
+}

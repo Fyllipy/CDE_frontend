@@ -1,0 +1,36 @@
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-error {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.form-footer {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.form-footer a {
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.auth-form .btn[disabled] {
+  opacity: 0.6;
+  cursor: wait;
+}
