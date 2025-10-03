@@ -20,12 +20,12 @@ export async function deleteColumn(projectId: string, columnId: string): Promise
   await api.delete(`/projects/${projectId}/kanban/columns/${columnId}`);
 }
 
-export async function createCard(projectId: string, columnId: string, payload: { title: string; description?: string; color?: string | null }): Promise<KanbanCard> {
+export async function createCard(projectId: string, columnId: string, payload: { title: string; description?: string }): Promise<KanbanCard> {
   const response = await api.post<{ card: KanbanCard }>(`/projects/${projectId}/kanban/columns/${columnId}/cards`, payload);
   return response.data.card;
 }
 
-export async function updateCard(projectId: string, cardId: string, payload: { title?: string; description?: string | null; color?: string | null }): Promise<KanbanCard | undefined> {
+export async function updateCard(projectId: string, cardId: string, payload: { title?: string; description?: string | null }): Promise<KanbanCard | undefined> {
   const response = await api.put<{ card?: KanbanCard }>(`/projects/${projectId}/kanban/cards/${cardId}`, payload);
   return response.data.card;
 }

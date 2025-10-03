@@ -6,10 +6,13 @@ export async function fetchFiles(projectId: string): Promise<FileEntry[]> {
   return response.data.files;
 }
 
-export async function uploadProjectFile(projectId: string, file: File, composedName: string): Promise<FileEntry> {
+export async function uploadProjectFile(projectId: string, file: File, composedName: string, description: string): Promise<FileEntry> {
   const formData = new FormData();
   const renamedFile = new File([file], composedName, { type: file.type });
   formData.append('file', renamedFile);
+  if (description) {
+    formData.append('description', description);
+  }
   const response = await api.post<{ file: FileEntry; revision: FileEntry['revisions'][number] }>(
     `/projects/${projectId}/files/upload`,
     formData,
@@ -25,4 +28,8 @@ export async function downloadRevision(projectId: string, revisionId: string): P
     responseType: 'blob'
   });
   return response.data;
+}
+
+export async function deleteProjectFile(projectId: string, fileId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}/files/${fileId}`);
 }

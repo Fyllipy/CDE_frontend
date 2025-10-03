@@ -1,37 +1,37 @@
-import { useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
-import './FileUploadModal.css';
+import { useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import "./FileUploadModal.css";
 
 type Props = {
   open: boolean;
   namingPattern?: string;
   onClose: () => void;
-  onUpload: (file: File, composedName: string) => Promise<void>;
+  onUpload: (file: File, composedName: string, description: string) => Promise<void>;
 };
 
 type PatternSegment = {
   key: string;
   label: string;
-  type: 'placeholder' | 'literal';
+  type: "placeholder" | "literal";
 };
 
 function parsePattern(pattern?: string): PatternSegment[] {
   if (!pattern) {
     return [];
   }
-  return pattern.split('-').map((segment) => {
-    if (segment.startsWith('{') && segment.endsWith('}')) {
+  return pattern.split("-").map((segment) => {
+    if (segment.startsWith("{") && segment.endsWith("}")) {
       const key = segment.slice(1, -1);
       return {
         key,
-        label: key.replace(/([A-Z])/g, ' $1').replace(/^[a-z]/, (char) => char.toUpperCase()),
-        type: 'placeholder' as const
+        label: key.replace(/([A-Z])/g, " $1").replace(/^[a-z]/, (char) => char.toUpperCase()),
+        type: "placeholder" as const
       };
     }
     return {
       key: segment,
       label: segment,
-      type: 'literal' as const
+      type: "literal" as const
     };
   });
 }
@@ -40,21 +40,22 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
   const patternSegments = useMemo(() => parsePattern(namingPattern), [namingPattern]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const composedBaseName = useMemo(() => {
     if (!patternSegments.length) {
-      return '';
+      return "";
     }
     return patternSegments
       .map((segment) => {
-        if (segment.type === 'literal') {
+        if (segment.type === "literal") {
           return segment.key;
         }
-        return values[segment.key]?.trim() ?? '';
+        return values[segment.key]?.trim() ?? "";
       })
-      .join('-');
+      .join("-");
   }, [patternSegments, values]);
 
   const placeholdersValid = useMemo(() => {
@@ -62,7 +63,7 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
       return true;
     }
     return patternSegments
-      .filter((segment) => segment.type === 'placeholder')
+      .filter((segment) => segment.type === "placeholder")
       .every((segment) => Boolean(values[segment.key]?.trim()));
   }, [patternSegments, values]);
 
@@ -73,26 +74,27 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedFile) {
-      setError('Selecione um arquivo valido.');
+      setError("Selecione um arquivo valido.");
       return;
     }
     if (!placeholdersValid) {
-      setError('Preencha o padrao de nomenclatura conforme configurado.');
+      setError("Preencha o padrao de nomenclatura conforme configurado.");
       return;
     }
 
     setLoading(true);
     setError(null);
     try {
-      const extension = selectedFile.name.includes('.') ? selectedFile.name.split('.').pop() ?? '' : '';
-      const baseName = patternSegments.length ? composedBaseName : selectedFile.name.replace(/\.[^.]+$/, '');
+      const extension = selectedFile.name.includes(".") ? selectedFile.name.split(".").pop() ?? "" : "";
+      const baseName = patternSegments.length ? composedBaseName : selectedFile.name.replace(/\.[^.]+$/, "");
       const finalName = extension ? `${baseName}.${extension}` : baseName;
-      await onUpload(selectedFile, finalName);
+      await onUpload(selectedFile, finalName, description.trim());
       setValues({});
       setSelectedFile(null);
+      setDescription("");
       onClose();
     } catch (err) {
-      setError('Falha ao realizar upload. Tente novamente.');
+      setError("Falha ao realizar upload. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -103,7 +105,7 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
       <div className="modal-card">
         <div className="modal-header">
           <h3>Novo upload</h3>
-          <button className="close-button" onClick={onClose} aria-label="Fechar modal">�</button>
+          <button className="close-button" onClick={onClose} aria-label="Fechar modal">&times;</button>
         </div>
         <form className="modal-body" onSubmit={handleSubmit}>
           <div className="field">
@@ -120,16 +122,16 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
 
           {patternSegments.length > 0 && (
             <div className="pattern-builder">
-              <p className="pattern-info">Preencha o padrão configurado para o projeto:</p>
+              <p className="pattern-info">Preencha o padrao configurado para o projeto:</p>
               <div className="pattern-grid">
                 {patternSegments.map((segment) => (
-                  segment.type === 'placeholder' ? (
+                  segment.type === "placeholder" ? (
                     <div className="field" key={segment.key}>
                       <label className="label" htmlFor={`segment-${segment.key}`}>{segment.label}</label>
                       <input
                         id={`segment-${segment.key}`}
                         className="input"
-                        value={values[segment.key] ?? ''}
+                        value={values[segment.key] ?? ""}
                         onChange={(event) => setValues((current) => ({ ...current, [segment.key]: event.target.value }))}
                         required
                       />
@@ -140,11 +142,23 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
                 ))}
               </div>
               <div className="preview">
-                <span>Pré-visualizacao:</span>
+                <span>Pre-visualizacao:</span>
                 <strong>{composedBaseName || '...'}</strong>
               </div>
             </div>
           )}
+
+          <div className="field">
+            <label className="label" htmlFor="revision-description">Descricao da revisao</label>
+            <textarea
+              id="revision-description"
+              className="input"
+              rows={3}
+              placeholder="Notas relevantes sobre esta revisao"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </div>
 
           {error && <p className="form-error">{error}</p>}
 

@@ -33,6 +33,7 @@ export type FileRevision = {
   uploadedByEmail?: string;
   storagePath: string;
   originalFilename: string;
+  description: string | null;
   createdAt: string;
 };
 
@@ -64,7 +65,6 @@ export type KanbanCard = {
   projectId: string;
   title: string;
   description: string | null;
-  color: string | null;
   position: number;
   createdAt: string;
   updatedAt: string;

@@ -25,7 +25,6 @@ type Props = {
 type DraftMap = Record<string, string>;
 
 const COLOR_PALETTE = ["#2563eb", "#0ea5e9", "#9333ea", "#16a34a", "#f97316", "#dc2626"];
-const DEFAULT_CARD_COLOR = "#ffffff";
 
 function lighten(hex: string | null | undefined, factor: number, fallback = "#e2e8f0"): string {
   if (!hex || !hex.startsWith("#")) {
@@ -60,7 +59,6 @@ export function KanbanBoard({ projectId, canManage }: Props) {
   const [newColumnColor, setNewColumnColor] = useState(paletteColor(0));
   const [cardDraftTitles, setCardDraftTitles] = useState<DraftMap>({});
   const [cardDraftDescriptions, setCardDraftDescriptions] = useState<DraftMap>({});
-  const [cardDraftColors, setCardDraftColors] = useState<DraftMap>({});
 
   useEffect(() => {
     let active = true;
@@ -110,16 +108,13 @@ export function KanbanBoard({ projectId, canManage }: Props) {
       return;
     }
     const description = cardDraftDescriptions[columnId] ?? "";
-    const fallbackColor = columnColor(columns.find((column) => column.id === columnId) ?? { color: DEFAULT_CARD_COLOR } as KanbanColumn, 0);
-    const color = cardDraftColors[columnId] || fallbackColor;
     try {
-      const card = await createCard(projectId, columnId, { title, description, color });
+      const card = await createCard(projectId, columnId, { title, description });
       setColumns((current) => current.map((column) => (
         column.id === columnId ? { ...column, cards: [...column.cards, card] } : column
       )));
       setCardDraftTitles((draft) => ({ ...draft, [columnId]: "" }));
       setCardDraftDescriptions((draft) => ({ ...draft, [columnId]: "" }));
-      setCardDraftColors((draft) => ({ ...draft, [columnId]: color }));
     } catch {
       setError("Nao foi possivel criar o cartao.");
     }
@@ -254,7 +249,7 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                   const baseColor = columnColor(column, index);
                   const headerColor = lighten(baseColor, 0.85, "#f1f5f9");
                   const borderColor = lighten(baseColor, 0.75, "#cbd5f5");
-                  const defaultCardColor = lighten(baseColor, 0.93, DEFAULT_CARD_COLOR);
+                  const defaultCardColor = lighten(baseColor, 0.97, "#ffffff");
 
                   return (
                     <Draggable draggableId={column.id} index={index} key={column.id}>
@@ -293,7 +288,7 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                             {(cardProvided) => (
                               <div className="card-stack" ref={cardProvided.innerRef} {...cardProvided.droppableProps}>
                                 {column.cards.map((card, cardIndex) => {
-                                  const cardColor = card.color && card.color.startsWith("#") ? card.color : defaultCardColor;
+                                  const cardColor = defaultCardColor;
                                   return (
                                     <Draggable draggableId={card.id} index={cardIndex} key={card.id}>
                                       {(cardDragProvided) => (
@@ -322,16 +317,6 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                                           <div className="card-actions">
                                             <span className="badge">Posicao {cardIndex + 1}</span>
                                             <div className="card-tools">
-                                              <input
-                                                type="color"
-                                                className="color-input"
-                                                value={card.color && card.color.startsWith("#") ? card.color : baseColor}
-                                                onChange={(event) => {
-                                                  const value = event.target.value || baseColor;
-                                                  updateCardLocal(column.id, card.id, { color: value });
-                                                  persistCard(card.id, column.id, { color: value });
-                                                }}
-                                              />
                                               <button className="link-button" onClick={() => handleDeleteCard(column.id, card.id)}>Remover</button>
                                             </div>
                                           </div>
@@ -358,15 +343,6 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                               onChange={(event) => setCardDraftDescriptions((draft) => ({ ...draft, [column.id]: event.target.value }))}
                             />
                             <div className="add-card-footer">
-                              <label className="color-picker-label">
-                                Cor
-                                <input
-                                  type="color"
-                                  className="color-input"
-                                  value={cardDraftColors[column.id] || column.color || DEFAULT_CARD_COLOR}
-                                  onChange={(event) => setCardDraftColors((draft) => ({ ...draft, [column.id]: event.target.value }))}
-                                />
-                              </label>
                               <button className="btn secondary" type="submit">Adicionar</button>
                             </div>
                           </form>
