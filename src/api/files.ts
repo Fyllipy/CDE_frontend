@@ -30,6 +30,6 @@ export async function downloadRevision(projectId: string, revisionId: string): P
   return response.data;
 }
 
-export async function deleteProjectFile(projectId: string, fileId: string): Promise<void> {
-  await api.delete(`/projects/${projectId}/files/${fileId}`);
+export async function deleteRevision(projectId: string, revisionId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}/files/revisions/${revisionId}`);
 }

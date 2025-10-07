@@ -4,6 +4,7 @@ import { getProject, listMembers } from "../api/projects";
 import type { Project, ProjectMembership } from "../types/api";
 import { FileManager } from "../features/files/FileManager";
 import { KanbanBoard } from "../features/kanban/KanbanBoard";
+import { GeneralDocumentsPanel } from "../features/generalDocuments/GeneralDocumentsPanel";
 import "./ProjectPage.css";
 
 export function ProjectPage() {
@@ -12,7 +13,7 @@ export function ProjectPage() {
   const [membership, setMembership] = useState<ProjectMembership | null>(null);
   const [namingPattern, setNamingPattern] = useState<string | undefined>();
   const [members, setMembers] = useState<ProjectMembership[]>([]);
-  const [view, setView] = useState<"files" | "kanban">("files");
+  const [view, setView] = useState<"files" | "general-docs" | "kanban">("files");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,6 +95,12 @@ export function ProjectPage() {
           Arquivos
         </button>
         <button
+          className={`toggle ${view === "general-docs" ? "active" : ""}`}
+          onClick={() => setView("general-docs")}
+        >
+          Documentos gerais
+        </button>
+        <button
           className={`toggle ${view === "kanban" ? "active" : ""}`}
           onClick={() => setView("kanban")}
         >
@@ -101,7 +108,7 @@ export function ProjectPage() {
         </button>
       </div>
 
-      {view === "files" ? (
+      {view === "files" && (
         <FileManager
           projectId={projectId}
           namingPattern={namingPattern}
@@ -109,7 +116,16 @@ export function ProjectPage() {
           canDelete={isManager}
           userDirectory={userDirectory}
         />
-      ) : (
+      )}
+      {view === "general-docs" && (
+        <GeneralDocumentsPanel
+          projectId={projectId}
+          canUpload={canUpload}
+          canDelete={isManager}
+          userDirectory={userDirectory}
+        />
+      )}
+      {view === "kanban" && (
         <div className="card">
           <KanbanBoard projectId={projectId} canManage={isManager} />
         </div>

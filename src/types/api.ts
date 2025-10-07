@@ -48,6 +48,18 @@ export type FileEntry = {
   revisions: FileRevision[];
 };
 
+export type GeneralDocument = {
+  id: string;
+  projectId: string;
+  category: 'photos' | 'documents' | 'received' | 'others';
+  originalFilename: string;
+  storagePath: string;
+  description: string | null;
+  uploadedById: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type KanbanColumn = {
   id: string;
   projectId: string;

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { downloadRevision, fetchFiles, uploadProjectFile, deleteProjectFile } from "../../api/files";
-import type { FileEntry, FileRevision } from "../../types/api";
-import { FileUploadModal } from "./FileUploadModal";
-import "./FileManager.css";
+import { useEffect, useMemo, useState } from 'react';
+import { downloadRevision, fetchFiles, uploadProjectFile, deleteRevision } from '../../api/files';
+import type { FileEntry, FileRevision } from '../../types/api';
+import { FileUploadModal } from './FileUploadModal';
+import './FileManager.css';
 
 type Props = {
   projectId: string;
@@ -14,27 +14,44 @@ type Props = {
 
 type PatternSegment = {
   key: string;
-  type: "placeholder" | "literal";
+  type: 'placeholder' | 'literal';
+};
+
+type FileRowProps = {
+  file: FileEntry;
+  canDelete: boolean;
+  userDirectory: Record<string, { name: string; email: string }>;
+  onDownload: (revisionId: string, originalName: string) => Promise<void>;
+  onDeleteRevision: (revisionId: string) => Promise<void>;
+  deletingRevisionId: string | null;
+};
+
+type RevisionEntryProps = {
+  revision: FileRevision;
+  userDirectory: Record<string, { name: string; email: string }>;
+  onDownload: (revisionId: string, originalName: string) => Promise<void>;
+  onDelete?: (revisionId: string) => Promise<void>;
+  deleting: boolean;
 };
 
 function parsePattern(pattern?: string): PatternSegment[] {
   if (!pattern) {
     return [];
   }
-  return pattern.split("-").map((segment) => {
-    if (segment.startsWith("{") && segment.endsWith("}")) {
-      return { key: segment.slice(1, -1), type: "placeholder" as const };
+  return pattern.split('-').map((segment) => {
+    if (segment.startsWith('{') && segment.endsWith('}')) {
+      return { key: segment.slice(1, -1), type: 'placeholder' as const };
     }
-    return { key: segment, type: "literal" as const };
+    return { key: segment, type: 'literal' as const };
   });
 }
 
-function normaliseDisciplineLabel(value: string | undefined): string {
+function normaliseDiscipline(value: string | undefined): string {
   if (!value) {
-    return "Outros";
+    return 'Outros';
   }
   const trimmed = value.trim();
-  return trimmed ? trimmed : "Outros";
+  return trimmed ? trimmed : 'Outros';
 }
 
 export function FileManager({ projectId, namingPattern, canUpload, canDelete, userDirectory }: Props) {
@@ -42,21 +59,21 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingRevisionId, setDeletingRevisionId] = useState<string | null>(null);
 
-  const patternSegments = useMemo(() => parsePattern(namingPattern), [namingPattern]);
-  const placeholderSegments = useMemo(() => patternSegments.filter((segment) => segment.type === "placeholder"), [patternSegments]);
+  const segments = useMemo(() => parsePattern(namingPattern), [namingPattern]);
+  const placeholderSegments = useMemo(() => segments.filter((segment) => segment.type === 'placeholder'), [segments]);
   const disciplineSegment = useMemo(() => placeholderSegments.find((segment) => /disciplina|discipline/i.test(segment.key)) ?? placeholderSegments[0], [placeholderSegments]);
 
-  const placeholderIndices = useMemo(() => {
-    const indexMap = new Map<string, number>();
-    patternSegments.forEach((segment, index) => {
-      if (segment.type === "placeholder") {
-        indexMap.set(segment.key, index);
+  const placeholderIndex = useMemo(() => {
+    const map = new Map<string, number>();
+    segments.forEach((segment, index) => {
+      if (segment.type === 'placeholder') {
+        map.set(segment.key, index);
       }
     });
-    return indexMap;
-  }, [patternSegments]);
+    return map;
+  }, [segments]);
 
   useEffect(() => {
     let active = true;
@@ -68,7 +85,7 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
         }
       } catch {
         if (active) {
-          setError("Nao foi possivel carregar os arquivos.");
+          setError('Nao foi possivel carregar os arquivos.');
         }
       } finally {
         if (active) {
@@ -82,64 +99,61 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
     };
   }, [projectId]);
 
-  async function refreshFiles() {
+  async function refresh() {
     const data = await fetchFiles(projectId);
     setFiles(data);
   }
 
   async function handleUpload(file: File, composedName: string, description: string) {
     await uploadProjectFile(projectId, file, composedName, description);
-    await refreshFiles();
+    await refresh();
   }
 
   async function handleDownload(revisionId: string, originalName: string) {
     const blob = await downloadRevision(projectId, revisionId);
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = originalName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = originalName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
     window.URL.revokeObjectURL(url);
   }
 
-  async function handleDelete(fileId: string) {
-    if (!window.confirm('Deseja remover este arquivo e todas as suas revisoes?')) {
+  async function handleDeleteRevision(revisionId: string) {
+    if (!window.confirm('Remover esta revisao? Esta acao nao pode ser desfeita.')) {
       return;
     }
-    setDeletingId(fileId);
+    setDeletingRevisionId(revisionId);
     try {
-      await deleteProjectFile(projectId, fileId);
-      await refreshFiles();
+      await deleteRevision(projectId, revisionId);
+      await refresh();
     } catch {
-      setError("Nao foi possivel remover o arquivo.");
+      setError('Nao foi possivel remover a revisao.');
     } finally {
-      setDeletingId(null);
+      setDeletingRevisionId(null);
     }
   }
 
-  const groupedFiles = useMemo(() => {
-    const groups = new Map<string, FileEntry[]>();
-    const hasPattern = Boolean(disciplineSegment && placeholderIndices.size);
+  const grouped = useMemo(() => {
+    const map = new Map<string, FileEntry[]>();
+    const hasPattern = Boolean(disciplineSegment && placeholderIndex.size);
     files.forEach((file) => {
-      let discipline = "Outros";
+      let discipline = 'Outros';
       if (hasPattern && disciplineSegment) {
-        const index = placeholderIndices.get(disciplineSegment.key);
-        const pieces = file.baseName.split("-");
-        discipline = normaliseDisciplineLabel(index !== undefined ? pieces[index] : undefined);
+        const idx = placeholderIndex.get(disciplineSegment.key);
+        const parts = file.baseName.split('-');
+        discipline = normaliseDiscipline(idx !== undefined ? parts[idx] : undefined);
       }
-      const list = groups.get(discipline) ?? [];
-      list.push(file);
-      groups.set(discipline, list);
+      const bucket = map.get(discipline) ?? [];
+      bucket.push(file);
+      map.set(discipline, bucket);
     });
-    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [files, disciplineSegment, placeholderIndices]);
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [files, disciplineSegment, placeholderIndex]);
 
-  const totalRevisions = useMemo(
-    () => files.reduce((acc, file) => acc + file.revisions.length, 0),
-    [files]
-  );
+  const totalRevisions = useMemo(() => files.reduce((acc, file) => acc + file.revisions.length, 0), [files]);
 
   if (loading) {
     return <div className="card">Carregando arquivos do projeto...</div>;
@@ -150,17 +164,15 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
       <div className="file-manager-header">
         <div>
           <h3>Arquivos do projeto</h3>
-          <p>{totalRevisions} revisões registradas</p>
+          <p>{totalRevisions} revisoes registradas</p>
         </div>
-        {canUpload && (
-          <button className="btn" onClick={() => setUploadOpen(true)}>Enviar arquivo</button>
-        )}
+        {canUpload && <button className="btn" onClick={() => setUploadOpen(true)}>Enviar arquivo</button>}
       </div>
 
       {error && <p className="form-error">{error}</p>}
 
       <div className="file-groups">
-        {groupedFiles.map(([discipline, entries]) => (
+        {grouped.map(([discipline, entries]) => (
           <section className="file-group" key={discipline}>
             <header className="file-group-header">
               <h4>{discipline}</h4>
@@ -171,9 +183,9 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
                 <thead>
                   <tr>
                     <th>Documento</th>
-                    <th>Revisão atual</th>
+                    <th>Revisao atual</th>
                     <th>Atualizado em</th>
-                    <th>Ações</th>
+                    <th>Acoes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -181,17 +193,16 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
                     <FileRow
                       key={file.id}
                       file={file}
+                      canDelete={canDelete}
                       userDirectory={userDirectory}
                       onDownload={handleDownload}
-                      onDelete={canDelete ? handleDelete : undefined}
-                      deleting={deletingId === file.id}
+                      onDeleteRevision={handleDeleteRevision}
+                      deletingRevisionId={deletingRevisionId}
                     />
                   ))}
                   {!entries.length && (
                     <tr>
-                      <td colSpan={4} className="empty-files">
-                        Nenhum arquivo cadastrado nesta disciplina.
-                      </td>
+                      <td colSpan={4} className="empty-files">Nenhum arquivo cadastrado nesta disciplina.</td>
                     </tr>
                   )}
                 </tbody>
@@ -202,7 +213,7 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
       </div>
 
       {canUpload && (
-        <p className="info-text">Padrão de nomenclatura ativo: <strong>{namingPattern ?? 'Nao configurado'}</strong></p>
+        <p className="info-text">Padrao de nomenclatura ativo: <strong>{namingPattern ?? 'Nao configurado'}</strong></p>
       )}
 
       <FileUploadModal
@@ -215,15 +226,7 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
   );
 }
 
-type FileRowProps = {
-  file: FileEntry;
-  userDirectory: Record<string, { name: string; email: string }>;
-  onDownload: (revisionId: string, originalName: string) => Promise<void>;
-  onDelete?: (fileId: string) => Promise<void>;
-  deleting: boolean;
-};
-
-function FileRow({ file, userDirectory, onDownload, onDelete, deleting }: FileRowProps) {
+function FileRow({ file, canDelete, userDirectory, onDownload, onDeleteRevision, deletingRevisionId }: FileRowProps) {
   const latestRevision = file.revisions[0];
 
   return (
@@ -231,14 +234,16 @@ function FileRow({ file, userDirectory, onDownload, onDelete, deleting }: FileRo
       <td>
         <div className="file-name">{file.baseName}.{file.extension}</div>
         <details className="revision-list">
-          <summary>Histórico ({file.revisions.length})</summary>
+          <summary>Historico ({file.revisions.length})</summary>
           <ul>
             {file.revisions.map((revision) => (
               <RevisionEntry
                 key={revision.id}
                 revision={revision}
-                authorLookup={userDirectory}
+                userDirectory={userDirectory}
                 onDownload={onDownload}
+                onDelete={canDelete ? onDeleteRevision : undefined}
+                deleting={deletingRevisionId === revision.id}
               />
             ))}
           </ul>
@@ -247,14 +252,12 @@ function FileRow({ file, userDirectory, onDownload, onDelete, deleting }: FileRo
       <td>{latestRevision?.revisionLabel ?? '-'}</td>
       <td>{latestRevision ? new Date(latestRevision.createdAt).toLocaleString() : '-'}</td>
       <td className="actions-cell">
-
-        {onDelete && (
+        {latestRevision && (
           <button
-            className="btn danger"
-            onClick={() => onDelete(file.id)}
-            disabled={deleting}
+            className="btn secondary"
+            onClick={() => onDownload(latestRevision.id, latestRevision.originalFilename)}
           >
-            {deleting ? 'Removendo...' : 'Remover'}
+            Download atual
           </button>
         )}
       </td>
@@ -262,27 +265,33 @@ function FileRow({ file, userDirectory, onDownload, onDelete, deleting }: FileRo
   );
 }
 
-type RevisionEntryProps = {
-  revision: FileRevision;
-  authorLookup: Record<string, { name: string; email: string }>;
-  onDownload: (revisionId: string, originalName: string) => Promise<void>;
-};
-
-function RevisionEntry({ revision, authorLookup, onDownload }: RevisionEntryProps) {
-  const author = authorLookup[revision.uploadedById];
+function RevisionEntry({ revision, userDirectory, onDownload, onDelete, deleting }: RevisionEntryProps) {
+  const author = userDirectory[revision.uploadedById];
   const displayAuthor = author?.name ?? revision.uploadedByName ?? revision.uploadedById;
+
   return (
     <li>
       <span className="badge">{revision.revisionLabel}</span>
       <span>{new Date(revision.createdAt).toLocaleString()}</span>
       <span className="author">{displayAuthor}</span>
       {revision.description && <span className="description">{revision.description}</span>}
-      <button
-        className="link-button"
-        onClick={() => onDownload(revision.id, revision.originalFilename)}
-      >
-        Baixar
-      </button>
+      <div className="revision-actions">
+        <button
+          className="link-button"
+          onClick={() => onDownload(revision.id, revision.originalFilename)}
+        >
+          Baixar
+        </button>
+        {onDelete && (
+          <button
+            className="link-button danger"
+            onClick={() => onDelete(revision.id)}
+            disabled={deleting}
+          >
+            {deleting ? 'Removendo...' : 'Remover'}
+          </button>
+        )}
+      </div>
     </li>
   );
 }
