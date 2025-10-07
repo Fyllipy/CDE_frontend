@@ -248,8 +248,8 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                 {columns.map((column, index) => {
                   const baseColor = columnColor(column, index);
                   const headerColor = lighten(baseColor, 0.85, "#f1f5f9");
-                  const borderColor = lighten(baseColor, 0.75, "#cbd5f5");
-                  const defaultCardColor = lighten(baseColor, 0.97, "#ffffff");
+                  const cardBackground = "#dfdfdfff";
+                  const cardBorderColor = "#e2e8f0";
 
                   return (
                     <Draggable draggableId={column.id} index={index} key={column.id}>
@@ -288,7 +288,6 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                             {(cardProvided) => (
                               <div className="card-stack" ref={cardProvided.innerRef} {...cardProvided.droppableProps}>
                                 {column.cards.map((card, cardIndex) => {
-                                  const cardColor = defaultCardColor;
                                   return (
                                     <Draggable draggableId={card.id} index={cardIndex} key={card.id}>
                                       {(cardDragProvided) => (
@@ -296,7 +295,7 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                                           className="kanban-card"
                                           ref={cardDragProvided.innerRef}
                                           {...cardDragProvided.draggableProps}
-                                          style={{ ...cardDragProvided.draggableProps.style, background: cardColor, borderColor }}
+                                          style={{ ...cardDragProvided.draggableProps.style, background: cardBackground, borderColor: cardBorderColor }}
                                         >
                                           <div className="card-handle" {...cardDragProvided.dragHandleProps}>
                                             <span className="grip" aria-hidden="true">: :</span>
