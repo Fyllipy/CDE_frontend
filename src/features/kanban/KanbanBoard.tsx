@@ -248,7 +248,7 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                 {columns.map((column, index) => {
                   const baseColor = columnColor(column, index);
                   const headerColor = lighten(baseColor, 0.85, "#f1f5f9");
-                  const cardBackground = "#dfdfdfff";
+                  const cardBackground = "#e9e9e9ff";
                   const cardBorderColor = "#e2e8f0";
 
                   return (

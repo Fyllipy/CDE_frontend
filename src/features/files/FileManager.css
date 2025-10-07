@@ -72,6 +72,16 @@
   grid-template-columns: 110px 1fr 1fr 1.2fr auto;
   gap: 0.5rem;
   align-items: center;
+  padding: 0.35rem 0.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.revision-entry:hover,
+.revision-entry:focus {
+  background: #e2e8f0;
+  outline: none;
 }
 
 .revision-list .description {
@@ -114,5 +124,39 @@
 .revision-actions {
   display: flex;
   gap: 0.35rem;
+  align-items: center;
+}
+
+.revision-modal {
+  max-width: 540px;
+}
+
+.revision-modal-body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.revision-detail {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.detail-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.revision-modal-footer {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
 }

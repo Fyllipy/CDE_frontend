@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { downloadRevision, fetchFiles, uploadProjectFile, deleteRevision } from '../../api/files';
 import type { FileEntry, FileRevision } from '../../types/api';
 import { FileUploadModal } from './FileUploadModal';
+import { RevisionDetailsModal } from './RevisionDetailsModal';
 import './FileManager.css';
 
 type Props = {
@@ -22,16 +23,18 @@ type FileRowProps = {
   canDelete: boolean;
   userDirectory: Record<string, { name: string; email: string }>;
   onDownload: (revisionId: string, originalName: string) => Promise<void>;
-  onDeleteRevision: (revisionId: string) => Promise<void>;
+  onDeleteRevision: (revisionId: string) => Promise<boolean>;
   deletingRevisionId: string | null;
+  onOpenRevision: (revision: FileRevision) => void;
 };
 
 type RevisionEntryProps = {
   revision: FileRevision;
   userDirectory: Record<string, { name: string; email: string }>;
   onDownload: (revisionId: string, originalName: string) => Promise<void>;
-  onDelete?: (revisionId: string) => Promise<void>;
+  onDelete?: (revisionId: string) => Promise<boolean>;
   deleting: boolean;
+  onOpen: (revision: FileRevision) => void;
 };
 
 function parsePattern(pattern?: string): PatternSegment[] {
@@ -60,6 +63,7 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
   const [error, setError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [deletingRevisionId, setDeletingRevisionId] = useState<string | null>(null);
+  const [selectedRevision, setSelectedRevision] = useState<FileRevision | null>(null);
 
   const segments = useMemo(() => parsePattern(namingPattern), [namingPattern]);
   const placeholderSegments = useMemo(() => segments.filter((segment) => segment.type === 'placeholder'), [segments]);
@@ -121,19 +125,25 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
     window.URL.revokeObjectURL(url);
   }
 
-  async function handleDeleteRevision(revisionId: string) {
+  async function handleDeleteRevision(revisionId: string): Promise<boolean> {
     if (!window.confirm('Remover esta revisao? Esta acao nao pode ser desfeita.')) {
-      return;
+      return false;
     }
     setDeletingRevisionId(revisionId);
+    let removed = false;
     try {
       await deleteRevision(projectId, revisionId);
       await refresh();
+      removed = true;
+      if (selectedRevision?.id === revisionId) {
+        setSelectedRevision(null);
+      }
     } catch {
       setError('Nao foi possivel remover a revisao.');
     } finally {
       setDeletingRevisionId(null);
     }
+    return removed;
   }
 
   const grouped = useMemo(() => {
@@ -154,6 +164,7 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
   }, [files, disciplineSegment, placeholderIndex]);
 
   const totalRevisions = useMemo(() => files.reduce((acc, file) => acc + file.revisions.length, 0), [files]);
+  const selectedRevisionAuthor = selectedRevision ? userDirectory[selectedRevision.uploadedById] ?? null : null;
 
   if (loading) {
     return <div className="card">Carregando arquivos do projeto...</div>;
@@ -198,6 +209,7 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
                       onDownload={handleDownload}
                       onDeleteRevision={handleDeleteRevision}
                       deletingRevisionId={deletingRevisionId}
+                      onOpenRevision={(revision) => setSelectedRevision(revision)}
                     />
                   ))}
                   {!entries.length && (
@@ -222,11 +234,22 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
         onClose={() => setUploadOpen(false)}
         onUpload={handleUpload}
       />
+
+      <RevisionDetailsModal
+        open={Boolean(selectedRevision)}
+        revision={selectedRevision}
+        author={selectedRevisionAuthor}
+        onClose={() => setSelectedRevision(null)}
+        onDownload={handleDownload}
+        onDelete={canDelete ? handleDeleteRevision : undefined}
+        deleting={Boolean(selectedRevision && deletingRevisionId === selectedRevision.id)}
+        canDelete={canDelete}
+      />
     </div>
   );
 }
 
-function FileRow({ file, canDelete, userDirectory, onDownload, onDeleteRevision, deletingRevisionId }: FileRowProps) {
+function FileRow({ file, canDelete, userDirectory, onDownload, onDeleteRevision, deletingRevisionId, onOpenRevision }: FileRowProps) {
   const latestRevision = file.revisions[0];
 
   return (
@@ -244,6 +267,7 @@ function FileRow({ file, canDelete, userDirectory, onDownload, onDeleteRevision,
                 onDownload={onDownload}
                 onDelete={canDelete ? onDeleteRevision : undefined}
                 deleting={deletingRevisionId === revision.id}
+                onOpen={onOpenRevision}
               />
             ))}
           </ul>
@@ -265,12 +289,23 @@ function FileRow({ file, canDelete, userDirectory, onDownload, onDeleteRevision,
   );
 }
 
-function RevisionEntry({ revision, userDirectory, onDownload, onDelete, deleting }: RevisionEntryProps) {
+function RevisionEntry({ revision, userDirectory, onDownload, onDelete, deleting, onOpen }: RevisionEntryProps) {
   const author = userDirectory[revision.uploadedById];
   const displayAuthor = author?.name ?? revision.uploadedByName ?? revision.uploadedById;
 
   return (
-    <li>
+    <li
+      className="revision-entry"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(revision)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen(revision);
+        }
+      }}
+    >
       <span className="badge">{revision.revisionLabel}</span>
       <span>{new Date(revision.createdAt).toLocaleString()}</span>
       <span className="author">{displayAuthor}</span>
@@ -278,14 +313,20 @@ function RevisionEntry({ revision, userDirectory, onDownload, onDelete, deleting
       <div className="revision-actions">
         <button
           className="link-button"
-          onClick={() => onDownload(revision.id, revision.originalFilename)}
+          onClick={async (event) => {
+            event.stopPropagation();
+            await onDownload(revision.id, revision.originalFilename);
+          }}
         >
           Baixar
         </button>
         {onDelete && (
           <button
             className="link-button danger"
-            onClick={() => onDelete(revision.id)}
+            onClick={async (event) => {
+              event.stopPropagation();
+              await onDelete(revision.id);
+            }}
             disabled={deleting}
           >
             {deleting ? 'Removendo...' : 'Remover'}

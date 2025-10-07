@@ -73,6 +73,15 @@ input, textarea, select {
   color: #0f172a;
 }
 
+.btn.danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.btn.danger:hover {
+  filter: brightness(1.05);
+}
+
 .input {
   width: 100%;
   padding: 0.65rem 0.75rem;
