@@ -6,7 +6,7 @@ type Props = {
   open: boolean;
   namingPattern?: string;
   onClose: () => void;
-  onUpload: (file: File, composedName: string, description: string) => Promise<void>;
+  onUpload: (payload: { baseName: string; pdfFile?: File | null; dxfFile?: File | null; description: string }) => Promise<void>;
 };
 
 type PatternSegment = {
@@ -39,7 +39,8 @@ function parsePattern(pattern?: string): PatternSegment[] {
 export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Props) {
   const patternSegments = useMemo(() => parsePattern(namingPattern), [namingPattern]);
   const [values, setValues] = useState<Record<string, string>>({});
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [dxfFile, setDxfFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,14 +68,22 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
       .every((segment) => Boolean(values[segment.key]?.trim()));
   }, [patternSegments, values]);
 
+  const selectionBaseName = useMemo(() => {
+    const source = pdfFile ?? dxfFile;
+    if (!source) {
+      return "";
+    }
+    return source.name.replace(/\.[^.]+$/, "");
+  }, [pdfFile, dxfFile]);
+
   if (!open) {
     return null;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedFile) {
-      setError("Selecione um arquivo valido.");
+    if (!pdfFile && !dxfFile) {
+      setError("Selecione ao menos um arquivo PDF ou DXF.");
       return;
     }
     if (!placeholdersValid) {
@@ -82,15 +91,33 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
       return;
     }
 
+    if (pdfFile && !/\.pdf$/i.test(pdfFile.name)) {
+      setError("O arquivo PDF deve possuir extensao .pdf.");
+      return;
+    }
+    if (dxfFile && !/\.dxf$/i.test(dxfFile.name)) {
+      setError("O arquivo DXF deve possuir extensao .dxf.");
+      return;
+    }
+
+    const baseName = patternSegments.length ? composedBaseName.trim() : selectionBaseName.trim();
+    if (!baseName) {
+      setError("Nao foi possivel determinar o nome base do arquivo.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const extension = selectedFile.name.includes(".") ? selectedFile.name.split(".").pop() ?? "" : "";
-      const baseName = patternSegments.length ? composedBaseName : selectedFile.name.replace(/\.[^.]+$/, "");
-      const finalName = extension ? `${baseName}.${extension}` : baseName;
-      await onUpload(selectedFile, finalName, description.trim());
+      await onUpload({
+        baseName,
+        pdfFile,
+        dxfFile,
+        description: description.trim()
+      });
       setValues({});
-      setSelectedFile(null);
+      setPdfFile(null);
+      setDxfFile(null);
       setDescription("");
       onClose();
     } catch (err) {
@@ -109,16 +136,30 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
         </div>
         <form className="modal-body" onSubmit={handleSubmit}>
           <div className="field">
-            <label className="label" htmlFor="file-input">Selecionar arquivo</label>
+            <label className="label" htmlFor="file-pdf">Arquivo PDF (opcional)</label>
             <input
-              id="file-input"
+              id="file-pdf"
               type="file"
+              accept=".pdf,application/pdf"
               onChange={(event) => {
-                setSelectedFile(event.target.files?.[0] ?? null);
+                setPdfFile(event.target.files?.[0] ?? null);
               }}
-              required
             />
           </div>
+
+          <div className="field">
+            <label className="label" htmlFor="file-dxf">Arquivo DXF (opcional)</label>
+            <input
+              id="file-dxf"
+              type="file"
+              accept=".dxf,application/dxf,application/x-dxf"
+              onChange={(event) => {
+                setDxfFile(event.target.files?.[0] ?? null);
+              }}
+            />
+          </div>
+
+          <p className="hint">Envie ao menos um arquivo. Quando possivel, anexe PDF e DXF.</p>
 
           {patternSegments.length > 0 && (
             <div className="pattern-builder">
@@ -143,7 +184,7 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
               </div>
               <div className="preview">
                 <span>Pre-visualizacao:</span>
-                <strong>{composedBaseName || '...'}</strong>
+                <strong>{composedBaseName || selectionBaseName || '...'}</strong>
               </div>
             </div>
           )}

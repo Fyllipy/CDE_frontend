@@ -6,7 +6,7 @@ type Props = {
   author: { name: string; email: string } | null;
   open: boolean;
   onClose: () => void;
-  onDownload: (revisionId: string, originalName: string) => Promise<void>;
+  onDownload: (revisionId: string, format: 'pdf' | 'dxf', filename: string) => Promise<void>;
   onDelete?: (revisionId: string) => Promise<boolean>;
   deleting: boolean;
   canDelete: boolean;
@@ -21,8 +21,8 @@ export function RevisionDetailsModal({ revision, author, open, onClose, onDownlo
   const displayName = author?.name ?? currentRevision.uploadedByName ?? currentRevision.uploadedById;
   const displayEmail = author?.email ?? currentRevision.uploadedByEmail ?? '';
 
-  async function handleDownload() {
-    await onDownload(currentRevision.id, currentRevision.originalFilename);
+  async function handleDownload(format: 'pdf' | 'dxf', filename: string) {
+    await onDownload(currentRevision.id, format, filename);
   }
 
   async function handleDelete() {
@@ -45,7 +45,11 @@ export function RevisionDetailsModal({ revision, author, open, onClose, onDownlo
         <div className="modal-body revision-modal-body">
           <div className="revision-detail">
             <span className="detail-label">Arquivo</span>
-            <span className="detail-value">{currentRevision.originalFilename}</span>
+            <div className="detail-value file-list">
+              {currentRevision.pdfOriginalFilename && <span>PDF: {currentRevision.pdfOriginalFilename}</span>}
+              {currentRevision.dxfOriginalFilename && <span>DXF: {currentRevision.dxfOriginalFilename}</span>}
+              {!currentRevision.pdfOriginalFilename && !currentRevision.dxfOriginalFilename && <span>Sem arquivos anexados.</span>}
+            </div>
           </div>
           <div className="revision-detail">
             <span className="detail-label">Enviado por</span>
@@ -64,9 +68,26 @@ export function RevisionDetailsModal({ revision, author, open, onClose, onDownlo
           </div>
         </div>
         <div className="modal-footer revision-modal-footer">
-          <button className="btn secondary" type="button" onClick={handleDownload}>
-            Baixar revisao
-          </button>
+          <div className="revision-modal-actions">
+            {currentRevision.pdfOriginalFilename && (
+              <button
+                className="btn secondary"
+                type="button"
+                onClick={() => handleDownload('pdf', currentRevision.pdfOriginalFilename!)}
+              >
+                Baixar PDF
+              </button>
+            )}
+            {currentRevision.dxfOriginalFilename && (
+              <button
+                className="btn secondary"
+                type="button"
+                onClick={() => handleDownload('dxf', currentRevision.dxfOriginalFilename!)}
+              >
+                Baixar DXF
+              </button>
+            )}
+          </div>
           {canDelete && onDelete && (
             <button className="btn danger" type="button" onClick={handleDelete} disabled={deleting}>
               {deleting ? 'Removendo...' : 'Remover revisao'}

@@ -101,6 +101,17 @@
   color: #dc2626;
 }
 
+.revision-files {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.revision-missing {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
 .empty-files {
   text-align: center;
   padding: 2rem 0;
@@ -159,4 +170,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.revision-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
 }

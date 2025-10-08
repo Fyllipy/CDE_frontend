@@ -1,18 +1,37 @@
 import { api } from './client';
 import type { FileEntry } from '../types/api';
 
+type UploadPayload = {
+  baseName: string;
+  pdfFile?: File | null;
+  dxfFile?: File | null;
+  description?: string;
+};
+
 export async function fetchFiles(projectId: string): Promise<FileEntry[]> {
   const response = await api.get<{ files: FileEntry[] }>(`/projects/${projectId}/files`);
   return response.data.files;
 }
 
-export async function uploadProjectFile(projectId: string, file: File, composedName: string, description: string): Promise<FileEntry> {
-  const formData = new FormData();
-  const renamedFile = new File([file], composedName, { type: file.type });
-  formData.append('file', renamedFile);
-  if (description) {
-    formData.append('description', description);
+export async function uploadProjectFile(projectId: string, payload: UploadPayload): Promise<FileEntry> {
+  if (!payload.pdfFile && !payload.dxfFile) {
+    throw new Error('Selecione ao menos um arquivo (PDF ou DXF).');
   }
+
+  const formData = new FormData();
+
+  if (payload.pdfFile) {
+    const pdfFile = new File([payload.pdfFile], `${payload.baseName}.pdf`, { type: payload.pdfFile.type });
+    formData.append('pdfFile', pdfFile);
+  }
+  if (payload.dxfFile) {
+    const dxfFile = new File([payload.dxfFile], `${payload.baseName}.dxf`, { type: payload.dxfFile.type });
+    formData.append('dxfFile', dxfFile);
+  }
+  if (payload.description) {
+    formData.append('description', payload.description);
+  }
+
   const response = await api.post<{ file: FileEntry; revision: FileEntry['revisions'][number] }>(
     `/projects/${projectId}/files/upload`,
     formData,
@@ -23,8 +42,9 @@ export async function uploadProjectFile(projectId: string, file: File, composedN
   return response.data.file;
 }
 
-export async function downloadRevision(projectId: string, revisionId: string): Promise<Blob> {
+export async function downloadRevision(projectId: string, revisionId: string, format: 'pdf' | 'dxf'): Promise<Blob> {
   const response = await api.get(`/projects/${projectId}/files/revisions/${revisionId}`, {
+    params: { format },
     responseType: 'blob'
   });
   return response.data;

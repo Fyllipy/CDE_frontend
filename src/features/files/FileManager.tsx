@@ -22,7 +22,7 @@ type FileRowProps = {
   file: FileEntry;
   canDelete: boolean;
   userDirectory: Record<string, { name: string; email: string }>;
-  onDownload: (revisionId: string, originalName: string) => Promise<void>;
+  onDownload: (revisionId: string, format: 'pdf' | 'dxf', filename: string) => Promise<void>;
   onDeleteRevision: (revisionId: string) => Promise<boolean>;
   deletingRevisionId: string | null;
   onOpenRevision: (revision: FileRevision) => void;
@@ -31,7 +31,7 @@ type FileRowProps = {
 type RevisionEntryProps = {
   revision: FileRevision;
   userDirectory: Record<string, { name: string; email: string }>;
-  onDownload: (revisionId: string, originalName: string) => Promise<void>;
+  onDownload: (revisionId: string, format: 'pdf' | 'dxf', filename: string) => Promise<void>;
   onDelete?: (revisionId: string) => Promise<boolean>;
   deleting: boolean;
   onOpen: (revision: FileRevision) => void;
@@ -108,17 +108,17 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
     setFiles(data);
   }
 
-  async function handleUpload(file: File, composedName: string, description: string) {
-    await uploadProjectFile(projectId, file, composedName, description);
+  async function handleUpload(payload: { baseName: string; pdfFile?: File | null; dxfFile?: File | null; description: string }) {
+    await uploadProjectFile(projectId, payload);
     await refresh();
   }
 
-  async function handleDownload(revisionId: string, originalName: string) {
-    const blob = await downloadRevision(projectId, revisionId);
+  async function handleDownload(revisionId: string, format: 'pdf' | 'dxf', filename: string) {
+    const blob = await downloadRevision(projectId, revisionId, format);
     const url = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = originalName;
+    anchor.download = filename;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -251,6 +251,11 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
 
 function FileRow({ file, canDelete, userDirectory, onDownload, onDeleteRevision, deletingRevisionId, onOpenRevision }: FileRowProps) {
   const latestRevision = file.revisions[0];
+  const latestDownload = latestRevision?.pdfOriginalFilename
+    ? { format: 'pdf' as const, filename: latestRevision.pdfOriginalFilename }
+    : latestRevision?.dxfOriginalFilename
+      ? { format: 'dxf' as const, filename: latestRevision.dxfOriginalFilename }
+      : null;
 
   return (
     <tr>
@@ -276,12 +281,12 @@ function FileRow({ file, canDelete, userDirectory, onDownload, onDeleteRevision,
       <td>{latestRevision?.revisionLabel ?? '-'}</td>
       <td>{latestRevision ? new Date(latestRevision.createdAt).toLocaleString() : '-'}</td>
       <td className="actions-cell">
-        {latestRevision && (
+        {latestRevision && latestDownload && (
           <button
             className="btn secondary"
-            onClick={() => onDownload(latestRevision.id, latestRevision.originalFilename)}
+            onClick={() => onDownload(latestRevision.id, latestDownload.format, latestDownload.filename)}
           >
-            Download atual
+            Download {latestDownload.format.toUpperCase()}
           </button>
         )}
       </td>
@@ -311,15 +316,33 @@ function RevisionEntry({ revision, userDirectory, onDownload, onDelete, deleting
       <span className="author">{displayAuthor}</span>
       {revision.description && <span className="description">{revision.description}</span>}
       <div className="revision-actions">
-        <button
-          className="link-button"
-          onClick={async (event) => {
-            event.stopPropagation();
-            await onDownload(revision.id, revision.originalFilename);
-          }}
-        >
-          Baixar
-        </button>
+        <div className="revision-files">
+          {revision.pdfOriginalFilename && (
+            <button
+              className="link-button"
+              onClick={async (event) => {
+                event.stopPropagation();
+                await onDownload(revision.id, 'pdf', revision.pdfOriginalFilename!);
+              }}
+            >
+              Baixar PDF
+            </button>
+          )}
+          {revision.dxfOriginalFilename && (
+            <button
+              className="link-button"
+              onClick={async (event) => {
+                event.stopPropagation();
+                await onDownload(revision.id, 'dxf', revision.dxfOriginalFilename!);
+              }}
+            >
+              Baixar DXF
+            </button>
+          )}
+          {!revision.pdfOriginalFilename && !revision.dxfOriginalFilename && (
+            <span className="revision-missing">Sem arquivos</span>
+          )}
+        </div>
         {onDelete && (
           <button
             className="link-button danger"

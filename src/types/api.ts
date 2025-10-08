@@ -31,8 +31,8 @@ export type FileRevision = {
   uploadedById: string;
   uploadedByName?: string;
   uploadedByEmail?: string;
-  storagePath: string;
-  originalFilename: string;
+  pdfOriginalFilename: string | null;
+  dxfOriginalFilename: string | null;
   description: string | null;
   createdAt: string;
 };
