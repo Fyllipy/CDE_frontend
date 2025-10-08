@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { downloadRevision, fetchFiles, uploadProjectFile, deleteRevision } from '../../api/files';
+import { downloadRevision, fetchFiles, uploadProjectFile, deleteRevision, updateRevision } from '../../api/files';
 import type { FileEntry, FileRevision } from '../../types/api';
 import { FileUploadModal } from './FileUploadModal';
 import { RevisionDetailsModal } from './RevisionDetailsModal';
@@ -166,6 +166,11 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
   const totalRevisions = useMemo(() => files.reduce((acc, file) => acc + file.revisions.length, 0), [files]);
   const selectedRevisionAuthor = selectedRevision ? userDirectory[selectedRevision.uploadedById] ?? null : null;
 
+  async function handleUpdateRevision(revisionId: string, data: { description?: string }) {
+    await updateRevision(projectId, revisionId, data);
+    await refresh();
+  }
+
   if (loading) {
     return <div className="card">Carregando arquivos do projeto...</div>;
   }
@@ -242,6 +247,7 @@ export function FileManager({ projectId, namingPattern, canUpload, canDelete, us
         onClose={() => setSelectedRevision(null)}
         onDownload={handleDownload}
         onDelete={canDelete ? handleDeleteRevision : undefined}
+        onUpdate={handleUpdateRevision}
         deleting={Boolean(selectedRevision && deletingRevisionId === selectedRevision.id)}
         canDelete={canDelete}
       />
@@ -296,7 +302,7 @@ function FileRow({ file, canDelete, userDirectory, onDownload, onDeleteRevision,
 
 function RevisionEntry({ revision, userDirectory, onDownload, onDelete, deleting, onOpen }: RevisionEntryProps) {
   const author = userDirectory[revision.uploadedById];
-  const displayAuthor = author?.name ?? revision.uploadedByName ?? revision.uploadedById;
+  const displayDrawing = revision.drawingName || '';
 
   return (
     <li
@@ -313,7 +319,7 @@ function RevisionEntry({ revision, userDirectory, onDownload, onDelete, deleting
     >
       <span className="badge">{revision.revisionLabel}</span>
       <span>{new Date(revision.createdAt).toLocaleString()}</span>
-      <span className="author">{displayAuthor}</span>
+      <span className="author">{displayDrawing || (author?.name ?? revision.uploadedByName ?? revision.uploadedById)}</span>
       {revision.description && <span className="description">{revision.description}</span>}
       <div className="revision-actions">
         <div className="revision-files">

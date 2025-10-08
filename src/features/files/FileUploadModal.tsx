@@ -6,7 +6,7 @@ type Props = {
   open: boolean;
   namingPattern?: string;
   onClose: () => void;
-  onUpload: (payload: { baseName: string; pdfFile?: File | null; dxfFile?: File | null; description: string }) => Promise<void>;
+  onUpload: (payload: { baseName: string; pdfFile?: File | null; dxfFile?: File | null; description: string; drawingName?: string }) => Promise<void>;
 };
 
 type PatternSegment = {
@@ -42,6 +42,7 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [dxfFile, setDxfFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
+  const [drawingName, setDrawingName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,11 +114,13 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
         baseName,
         pdfFile,
         dxfFile,
-        description: description.trim()
+        description: description.trim(),
+        drawingName: drawingName.trim() || undefined
       });
       setValues({});
       setPdfFile(null);
       setDxfFile(null);
+      setDrawingName("");
       setDescription("");
       onClose();
     } catch (err) {
@@ -188,6 +191,17 @@ export function FileUploadModal({ open, namingPattern, onClose, onUpload }: Prop
               </div>
             </div>
           )}
+
+          <div className="field">
+            <label className="label" htmlFor="drawing-name">Nome do desenho</label>
+            <input
+              id="drawing-name"
+              className="input"
+              placeholder="Ex.: Planta de forma - pav. tipo"
+              value={drawingName}
+              onChange={(e) => setDrawingName(e.target.value)}
+            />
+          </div>
 
           <div className="field">
             <label className="label" htmlFor="revision-description">Descricao da revisao</label>

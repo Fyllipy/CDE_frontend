@@ -6,6 +6,7 @@ type UploadPayload = {
   pdfFile?: File | null;
   dxfFile?: File | null;
   description?: string;
+  drawingName?: string;
 };
 
 export async function fetchFiles(projectId: string): Promise<FileEntry[]> {
@@ -31,6 +32,9 @@ export async function uploadProjectFile(projectId: string, payload: UploadPayloa
   if (payload.description) {
     formData.append('description', payload.description);
   }
+  if (payload.drawingName) {
+    formData.append('drawingName', payload.drawingName);
+  }
 
   const response = await api.post<{ file: FileEntry; revision: FileEntry['revisions'][number] }>(
     `/projects/${projectId}/files/upload`,
@@ -52,4 +56,8 @@ export async function downloadRevision(projectId: string, revisionId: string, fo
 
 export async function deleteRevision(projectId: string, revisionId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/files/revisions/${revisionId}`);
+}
+
+export async function updateRevision(projectId: string, revisionId: string, data: { description?: string; drawingName?: string }): Promise<void> {
+  await api.patch(`/projects/${projectId}/files/revisions/${revisionId}`, data);
 }

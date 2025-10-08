@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { FileRevision } from '../../types/api';
 import './FileUploadModal.css';
 
@@ -8,16 +9,18 @@ type Props = {
   onClose: () => void;
   onDownload: (revisionId: string, format: 'pdf' | 'dxf', filename: string) => Promise<void>;
   onDelete?: (revisionId: string) => Promise<boolean>;
+  onUpdate?: (revisionId: string, data: { description?: string }) => Promise<void>;
   deleting: boolean;
   canDelete: boolean;
 };
 
-export function RevisionDetailsModal({ revision, author, open, onClose, onDownload, onDelete, deleting, canDelete }: Props) {
+export function RevisionDetailsModal({ revision, author, open, onClose, onDownload, onDelete, onUpdate, deleting, canDelete }: Props) {
   if (!open || !revision) {
     return null;
   }
 
   const currentRevision = revision;
+  const [notes, setNotes] = useState(currentRevision.description ?? '');
   const displayName = author?.name ?? currentRevision.uploadedByName ?? currentRevision.uploadedById;
   const displayEmail = author?.email ?? currentRevision.uploadedByEmail ?? '';
 
@@ -35,6 +38,11 @@ export function RevisionDetailsModal({ revision, author, open, onClose, onDownlo
     }
   }
 
+  async function handleSaveNotes() {
+    if (!onUpdate) return;
+    await onUpdate(currentRevision.id, { description: notes });
+  }
+
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal-card revision-modal">
@@ -43,6 +51,10 @@ export function RevisionDetailsModal({ revision, author, open, onClose, onDownlo
           <button className="close-button" onClick={onClose} aria-label="Fechar modal">&times;</button>
         </div>
         <div className="modal-body revision-modal-body">
+          <div className="revision-detail">
+            <span className="detail-label">Nome do desenho</span>
+            <span className="detail-value">{currentRevision.drawingName || '-'}</span>
+          </div>
           <div className="revision-detail">
             <span className="detail-label">Arquivo</span>
             <div className="detail-value file-list">
@@ -63,8 +75,8 @@ export function RevisionDetailsModal({ revision, author, open, onClose, onDownlo
             <span className="detail-value">{new Date(currentRevision.createdAt).toLocaleString()}</span>
           </div>
           <div className="revision-detail">
-            <span className="detail-label">Descricao</span>
-            <span className="detail-value">{currentRevision.description?.trim() || 'Sem descricao registrada.'}</span>
+            <span className="detail-label">Anotações</span>
+            <textarea className="input" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </div>
         <div className="modal-footer revision-modal-footer">
@@ -88,6 +100,7 @@ export function RevisionDetailsModal({ revision, author, open, onClose, onDownlo
               </button>
             )}
           </div>
+          <button className="btn" type="button" onClick={handleSaveNotes}>Salvar anotações</button>
           {canDelete && onDelete && (
             <button className="btn danger" type="button" onClick={handleDelete} disabled={deleting}>
               {deleting ? 'Removendo...' : 'Remover revisao'}

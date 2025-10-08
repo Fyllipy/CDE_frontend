@@ -33,6 +33,7 @@ export type FileRevision = {
   uploadedByEmail?: string;
   pdfOriginalFilename: string | null;
   dxfOriginalFilename: string | null;
+  drawingName?: string | null;
   description: string | null;
   createdAt: string;
 };
