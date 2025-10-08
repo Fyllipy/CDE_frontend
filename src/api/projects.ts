@@ -39,6 +39,16 @@ export async function addMember(projectId: string, payload: { userId: string; ro
   return response.data.member;
 }
 
+export async function addMemberByEmail(projectId: string, payload: { email: string; role: ProjectMembership['role'] }): Promise<ProjectMembership> {
+  const response = await api.post<{ member: ProjectMembership }>(`/projects/${projectId}/members/by-email`, payload);
+  return response.data.member;
+}
+
+export async function updateMemberRole(projectId: string, memberId: string, role: ProjectMembership['role']): Promise<ProjectMembership> {
+  const response = await api.patch<{ member: ProjectMembership }>(`/projects/${projectId}/members/${memberId}`, { role });
+  return response.data.member;
+}
+
 export async function removeMember(projectId: string, memberId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/members/${memberId}`);
 }

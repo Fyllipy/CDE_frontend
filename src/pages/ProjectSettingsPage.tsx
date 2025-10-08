@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { addMember, deleteProject, getProject, listMembers, removeMember, updateNamingStandard } from '../api/projects';
+import { addMemberByEmail, deleteProject, getProject, listMembers, removeMember, updateNamingStandard } from '../api/projects';
 import type { Project, ProjectMembership } from '../types/api';
 import './ProjectSettingsPage.css';
 
@@ -15,7 +15,7 @@ export function ProjectSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [patternSaving, setPatternSaving] = useState(false);
-  const [newMemberId, setNewMemberId] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<'MANAGER' | 'MEMBER'>('MEMBER');
   const [memberSaving, setMemberSaving] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
@@ -34,7 +34,7 @@ export function ProjectSettingsPage() {
         }
       } catch (err) {
         if (active) {
-          setError('Não foi possível carregar as configurações do projeto.');
+          setError('Nao foi possivel carregar as configuracoes do projeto.');
         }
       } finally {
         if (active) {
@@ -57,7 +57,7 @@ export function ProjectSettingsPage() {
     try {
       await updateNamingStandard(projectId, pattern);
     } catch (err) {
-      setError('Não foi possível salvar o padrão de nomenclatura.');
+      setError('Nao foi possivel salvar o padrao de nomenclatura.');
     } finally {
       setPatternSaving(false);
     }
@@ -65,21 +65,21 @@ export function ProjectSettingsPage() {
 
   async function handleAddMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!newMemberId.trim()) {
+    if (!newMemberEmail.trim()) {
       return;
     }
     setMemberSaving(true);
     setError(null);
     try {
-      const member = await addMember(projectId, { userId: newMemberId.trim(), role: newMemberRole });
+      const member = await addMemberByEmail(projectId, { email: newMemberEmail.trim(), role: newMemberRole });
       setMembers((current) => {
         const without = current.filter((item) => item.userId !== member.userId);
         return [...without, member];
       });
-      setNewMemberId('');
+      setNewMemberEmail('');
       setNewMemberRole('MEMBER');
     } catch (err) {
-      setError('Não foi possível adicionar o membro. Verifique o identificador informado.');
+      setError('Nao foi possivel adicionar o membro. Verifique o email informado.');
     } finally {
       setMemberSaving(false);
     }
@@ -110,13 +110,13 @@ export function ProjectSettingsPage() {
   }
 
   if (loading) {
-    return <div className="card">Carregando configurações...</div>;
+    return <div className="card">Carregando configuracoes...</div>;
   }
 
   if (!isManager) {
     return (
       <div className="card">
-        <p>Somente gestores do projeto podem acessar esta página.</p>
+        <p>Somente gestores do projeto podem acessar esta pagina.</p>
         <button className="btn" onClick={() => navigate(-1)}>Voltar</button>
       </div>
     );
@@ -124,16 +124,16 @@ export function ProjectSettingsPage() {
 
   return (
     <div className="settings card">
-      <h2>Configuraçõees do Projeto</h2>
+      <h2>Configuracoes do Projeto</h2>
       {project && <p className="subtitle">{project.name}</p>}
-      <p className="subtitle">Gerencie o padrão de nomenclatura e o acesso dos membros.</p>
+      <p className="subtitle">Gerencie o padrao de nomenclatura e o acesso dos membros.</p>
       {error && <p className="form-error">{error}</p>}
 
       <section className="settings-section">
-        <h3>Padrão de Nomenclatura</h3>
+        <h3>Padrao de Nomenclatura</h3>
         <form className="grid" onSubmit={handlePatternUpdate}>
           <div className="field">
-            <label className="label" htmlFor="pattern">Definição do padr�o</label>
+            <label className="label" htmlFor="pattern">Definicao do padrao</label>
             <input
               id="pattern"
               className="input"
@@ -142,11 +142,11 @@ export function ProjectSettingsPage() {
               placeholder="{disciplina}-{tipo}-{sequencia}"
               required
             />
-            <span className="hint">Utilize chaves para campos variáveis e hfens para separação.</span>
+            <span className="hint">Utilize chaves para campos variaveis e hifens para separacao.</span>
           </div>
           <div className="form-actions">
             <button className="btn" type="submit" disabled={patternSaving}>
-              {patternSaving ? 'Salvando...' : 'Salvar padr�o'}
+              {patternSaving ? 'Salvando...' : 'Salvar padrao'}
             </button>
           </div>
         </form>
@@ -156,13 +156,13 @@ export function ProjectSettingsPage() {
         <h3>Membros do Projeto</h3>
         <form className="member-form" onSubmit={handleAddMember}>
           <div className="field">
-            <label className="label" htmlFor="member-id">Identificador do usu�rio</label>
+            <label className="label" htmlFor="member-email">Email do usuario</label>
             <input
-              id="member-id"
+              id="member-email"
               className="input"
-              value={newMemberId}
-              onChange={(event) => setNewMemberId(event.target.value)}
-              placeholder="UUID do usu�rio"
+              value={newMemberEmail}
+              onChange={(event) => setNewMemberEmail(event.target.value)}
+              placeholder="email@dominio.com"
               required
             />
           </div>
@@ -186,7 +186,7 @@ export function ProjectSettingsPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>Usuário</th>
+              <th>Usuario</th>
               <th>Papel</th>
               <th>Desde</th>
               <th></th>
@@ -204,7 +204,7 @@ export function ProjectSettingsPage() {
                 <td>{member.role === 'MANAGER' ? 'Gestor' : 'Membro'}</td>
                 <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
                 <td>
-                  {member.userId !== membership.userId && (
+                  {member.userId !== membership!.userId && (
                     <button className="link-button" onClick={() => handleRemoveMember(member.userId)}>Remover</button>
                   )}
                 </td>

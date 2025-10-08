@@ -9,6 +9,7 @@ import { RegisterPage } from '../pages/RegisterPage';
 import { ProjectPage } from '../pages/ProjectPage';
 import { ProjectSettingsPage } from '../pages/ProjectSettingsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { AdminPage } from '../pages/AdminPage';
 
 export function AppRouter() {
   return (
@@ -23,6 +24,7 @@ export function AppRouter() {
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="/projects/:projectId" element={<ProjectPage />} />
           <Route path="/projects/:projectId/settings" element={<ProjectSettingsPage />} />
         </Route>
