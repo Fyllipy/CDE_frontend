@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { addMember, getProject, listMembers, removeMember, updateNamingStandard } from '../api/projects';
+import { addMember, deleteProject, getProject, listMembers, removeMember, updateNamingStandard } from '../api/projects';
 import type { Project, ProjectMembership } from '../types/api';
 import './ProjectSettingsPage.css';
 
@@ -18,6 +18,7 @@ export function ProjectSettingsPage() {
   const [newMemberId, setNewMemberId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<'MANAGER' | 'MEMBER'>('MEMBER');
   const [memberSaving, setMemberSaving] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -87,6 +88,25 @@ export function ProjectSettingsPage() {
   async function handleRemoveMember(memberId: string) {
     await removeMember(projectId, memberId);
     setMembers((current) => current.filter((member) => member.userId !== memberId));
+  }
+
+  async function handleDeleteProject() {
+    if (!project) {
+      return;
+    }
+    const confirmation = window.confirm(`Remover o projeto "${project.name}"? Esta acao nao pode ser desfeita.`);
+    if (!confirmation) {
+      return;
+    }
+    setDeletingProject(true);
+    setError(null);
+    try {
+      await deleteProject(projectId);
+      navigate('/');
+    } catch {
+      setError('Nao foi possivel remover o projeto.');
+      setDeletingProject(false);
+    }
   }
 
   if (loading) {
@@ -192,6 +212,14 @@ export function ProjectSettingsPage() {
             ))}
           </tbody>
         </table>
+      </section>
+
+      <section className="settings-section danger-zone">
+        <h3>Remocao do Projeto</h3>
+        <p className="subtitle">Excluir o projeto remove todos os arquivos, revisoes, quadros Kanban e documentos associados.</p>
+        <button className="btn danger" type="button" onClick={handleDeleteProject} disabled={deletingProject}>
+          {deletingProject ? 'Removendo...' : 'Excluir projeto'}
+        </button>
       </section>
     </div>
   );
