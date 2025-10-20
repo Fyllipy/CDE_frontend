@@ -70,6 +70,7 @@
   gap: 0.5rem;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
+  position: relative;
 }
 
 .card-handle {
@@ -139,6 +140,16 @@
   flex: 0 0 300px;
   box-sizing: border-box;
 }
+.add-column-modal {
+  width: 520px;
+  max-width: calc(100% - 48px);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
 
 .add-card textarea.input {
   min-height: 60px;
@@ -177,10 +188,14 @@
   padding: 0;
 }
 
-.card-details-modal {
+.card-details-modal,
+.modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.35);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -189,9 +204,11 @@
 .card-details {
   width: 720px;
   max-width: calc(100% - 48px);
+  max-height: calc(100% - 48px);
   background: #fff;
   padding: 18px;
   border-radius: 12px;
+  overflow: auto;
 }
 .badge { padding: 6px 8px; border-radius: 8px; display: inline-block; }
 .comment { border-top: 1px solid #eee; padding: 8px 0; }
@@ -203,12 +220,58 @@
   gap: 1rem;
 }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .labels-panel {
   background: #f1f5f9;
   border-radius: 12px;
   padding: 1rem;
   display: grid;
   gap: 0.8rem;
+}
+
+.custom-fields-panel,
+.archived-panel,
+.bulk-panel {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.bulk-panel {
+  gap: 0.9rem;
+}
+
+.bulk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.bulk-counter {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.bulk-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.bulk-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .labels-panel-header h3 {
@@ -219,6 +282,14 @@
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
   color: #64748b;
+}
+
+.panel-header h3 {
+  margin: 0;
+}
+
+.panel-header p {
+  margin: 0;
 }
 
 .labels-list {
@@ -253,6 +324,17 @@
   flex: 1 1 200px;
 }
 
+.custom-field-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.custom-field-form .input {
+  flex: 1 1 200px;
+}
+
 .label-color-picker {
   display: inline-flex;
   align-items: center;
@@ -269,6 +351,44 @@
   background: none;
 }
 
+.custom-field-list {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.custom-field-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.archived-list {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.archived-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
 .column-tools .link-button {
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
@@ -281,4 +401,160 @@
   padding: 0.25rem 0.45rem;
   border-radius: 6px;
   background: rgba(226, 232, 240, 0.65);
+}
+
+.card-select {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.card-details-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.card-details-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.card-section {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.checklist-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.checklist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.checklist-title {
+  flex: 1;
+}
+
+.checklist-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.checklist-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.45rem;
+  border-radius: 6px;
+  background: #f1f5f9;
+}
+
+.checklist-item-title {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.checklist-item-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.card-details-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.custom-field-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.custom-field-control {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.subtask-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.modal-overlay .project-settings-modal {
+  width: 640px;
+  max-width: calc(100% - 48px);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.project-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.project-settings-body {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.modal-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #475569;
 }

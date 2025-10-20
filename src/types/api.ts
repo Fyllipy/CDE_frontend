@@ -109,6 +109,41 @@ export type KanbanColumn = {
   cards: KanbanCard[];
 };
 
+export type KanbanChecklistItem = {
+  id: string;
+  checklistId: string;
+  title: string;
+  position: number;
+  doneAt: string | null;
+  assigneeId: string | null;
+  assigneeName?: string | null;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type KanbanChecklist = {
+  id: string;
+  cardId: string;
+  title: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+  items: KanbanChecklistItem[];
+};
+
+export type KanbanCustomField = {
+  id: string;
+  projectId: string;
+  name: string;
+  type: 'TEXT' | 'NUMBER' | 'DATE' | 'LIST' | 'BOOLEAN';
+  options: Record<string, unknown> | null;
+  required: boolean;
+  createdAt: string;
+  updatedAt: string;
+  value: unknown;
+};
+
 export type KanbanCard = {
   id: string;
   columnId: string;
@@ -123,12 +158,19 @@ export type KanbanCard = {
   dueDate: string | null;
   completedAt: string | null;
   archivedAt: string | null;
+  parentId: string | null;
   labels: KanbanLabel[];
   assignees: KanbanAssignee[];
   commentsCount: number;
+  checklists?: KanbanChecklist[];
+  customFields?: KanbanCustomField[];
+  subtasks?: KanbanCard[];
 };
 
 export type KanbanCardDetails = KanbanCard & {
   comments: KanbanComment[];
   activity: KanbanActivity[];
+  checklists: KanbanChecklist[];
+  customFields: KanbanCustomField[];
+  subtasks: KanbanCard[];
 };

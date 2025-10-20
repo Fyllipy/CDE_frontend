@@ -6,11 +6,16 @@ import type {
   KanbanCardDetails,
   KanbanComment,
   KanbanActivity,
+  KanbanChecklist,
+  KanbanChecklistItem,
+  KanbanCustomField,
 } from '../types/api';
 
 type BoardPayload = {
   board: KanbanColumn[];
   labels: KanbanLabel[];
+  archivedColumns: KanbanColumn[];
+  archivedCards: KanbanCard[];
 };
 
 export async function fetchBoard(projectId: string): Promise<BoardPayload> {
@@ -154,4 +159,170 @@ export async function fetchComments(projectId: string, cardId: string): Promise<
 export async function fetchActivity(projectId: string, cardId: string): Promise<KanbanActivity[]> {
   const response = await api.get<{ activities: KanbanActivity[] }>(`/projects/${projectId}/kanban/cards/${cardId}/activity`);
   return response.data.activities;
+}
+
+export async function archiveColumn(projectId: string, columnId: string): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/columns/${columnId}/archive`, {});
+}
+
+export async function restoreColumn(projectId: string, columnId: string): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/columns/${columnId}/restore`, {});
+}
+
+export async function archiveCard(projectId: string, cardId: string): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/cards/${cardId}/archive`, {});
+}
+
+export async function restoreCard(projectId: string, cardId: string): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/cards/${cardId}/restore`, {});
+}
+
+export async function bulkArchiveCards(projectId: string, cardIds: string[]): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/cards/bulk/archive`, { cardIds });
+}
+
+export async function bulkRestoreCards(projectId: string, cardIds: string[]): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/cards/bulk/restore`, { cardIds });
+}
+
+export async function bulkMoveCards(projectId: string, payload: { cardIds: string[]; toColumnId: string }): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/cards/bulk/move`, payload);
+}
+
+export async function bulkAssignCards(
+  projectId: string,
+  payload: { cardIds: string[]; userId: string; action: 'add' | 'remove' }
+): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/cards/bulk/assign`, payload);
+}
+
+export async function bulkLabelCards(
+  projectId: string,
+  payload: { cardIds: string[]; labelId: string; action: 'attach' | 'detach' }
+): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/cards/bulk/labels`, payload);
+}
+
+export async function createChecklist(
+  projectId: string,
+  cardId: string,
+  payload: { title: string }
+): Promise<KanbanChecklist> {
+  const response = await api.post<{ checklist: KanbanChecklist }>(
+    `/projects/${projectId}/kanban/cards/${cardId}/checklists`,
+    payload
+  );
+  return response.data.checklist;
+}
+
+export async function reorderChecklists(
+  projectId: string,
+  cardId: string,
+  orderedIds: string[]
+): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/cards/${cardId}/checklists/reorder`, { orderedIds });
+}
+
+export async function updateChecklist(
+  projectId: string,
+  checklistId: string,
+  payload: { title: string }
+): Promise<KanbanChecklist> {
+  const response = await api.put<{ checklist: KanbanChecklist }>(
+    `/projects/${projectId}/kanban/checklists/${checklistId}`,
+    payload
+  );
+  return response.data.checklist;
+}
+
+export async function deleteChecklist(projectId: string, checklistId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}/kanban/checklists/${checklistId}`);
+}
+
+export async function createChecklistItem(
+  projectId: string,
+  checklistId: string,
+  payload: { title: string }
+): Promise<KanbanChecklistItem> {
+  const response = await api.post<{ item: KanbanChecklistItem }>(
+    `/projects/${projectId}/kanban/checklists/${checklistId}/items`,
+    payload
+  );
+  return response.data.item;
+}
+
+export async function reorderChecklistItems(
+  projectId: string,
+  checklistId: string,
+  orderedIds: string[]
+): Promise<void> {
+  await api.post(`/projects/${projectId}/kanban/checklists/${checklistId}/reorder`, { orderedIds });
+}
+
+export async function updateChecklistItem(
+  projectId: string,
+  itemId: string,
+  payload: { title?: string; doneAt?: string | null; assigneeId?: string | null; dueDate?: string | null }
+): Promise<KanbanChecklistItem> {
+  const response = await api.put<{ item: KanbanChecklistItem }>(
+    `/projects/${projectId}/kanban/checklist-items/${itemId}`,
+    payload
+  );
+  return response.data.item;
+}
+
+export async function deleteChecklistItem(projectId: string, itemId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}/kanban/checklist-items/${itemId}`);
+}
+
+export async function promoteChecklistItem(
+  projectId: string,
+  itemId: string
+): Promise<KanbanCard> {
+  const response = await api.post<{ card: KanbanCard }>(
+    `/projects/${projectId}/kanban/checklist-items/${itemId}/promote`,
+    {}
+  );
+  return response.data.card;
+}
+
+export async function listCustomFields(projectId: string): Promise<KanbanCustomField[]> {
+  const response = await api.get<{ fields: KanbanCustomField[] }>(`/projects/${projectId}/kanban/custom-fields`);
+  return response.data.fields;
+}
+
+export async function createCustomField(
+  projectId: string,
+  payload: { name: string; type: KanbanCustomField['type']; options?: any; required?: boolean }
+): Promise<KanbanCustomField> {
+  const response = await api.post<{ field: KanbanCustomField }>(
+    `/projects/${projectId}/kanban/custom-fields`,
+    payload
+  );
+  return response.data.field;
+}
+
+export async function updateCustomField(
+  projectId: string,
+  fieldId: string,
+  payload: { name?: string; type?: KanbanCustomField['type']; options?: any; required?: boolean }
+): Promise<KanbanCustomField> {
+  const response = await api.put<{ field: KanbanCustomField }>(
+    `/projects/${projectId}/kanban/custom-fields/${fieldId}`,
+    payload
+  );
+  return response.data.field;
+}
+
+export async function deleteCustomField(projectId: string, fieldId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}/kanban/custom-fields/${fieldId}`);
+}
+
+export async function setCardCustomFieldValue(
+  projectId: string,
+  cardId: string,
+  fieldId: string,
+  value: unknown
+): Promise<void> {
+  await api.put(`/projects/${projectId}/kanban/cards/${cardId}/custom-fields/${fieldId}`, { value });
 }

@@ -5,8 +5,6 @@ import type { ChangeEvent, FormEvent, MouseEvent } from "react";
 import {
   createCard,
   createColumn,
-  deleteCard,
-  deleteColumn,
   fetchBoard,
   moveCard,
   reorderCards,
@@ -15,8 +13,34 @@ import {
   updateColumn,
   createLabel,
   fetchCardDetails,
+  createComment,
+  archiveCard,
+  restoreCard,
+  archiveColumn,
+  restoreColumn,
+  createChecklist,
+  reorderChecklists,
+  updateChecklist,
+  deleteChecklist,
+  createChecklistItem,
+  reorderChecklistItems,
+  updateChecklistItem,
+  deleteChecklistItem,
+  promoteChecklistItem,
+  listCustomFields,
+  createCustomField,
+  deleteCustomField,
+  setCardCustomFieldValue,
 } from "../../api/kanban";
-import type { KanbanCard, KanbanColumn, KanbanLabel } from "../../types/api";
+import type {
+  KanbanCard,
+  KanbanCardDetails,
+  KanbanColumn,
+  KanbanLabel,
+  KanbanChecklist,
+  KanbanChecklistItem,
+  KanbanCustomField,
+} from "../../types/api";
 import "./KanbanBoard.css";
 
 type Props = {
@@ -57,7 +81,10 @@ function columnColor(column: KanbanColumn, index: number): string {
 export function KanbanBoard({ projectId, canManage }: Props) {
   const [columns, setColumns] = useState<KanbanColumn[]>([]);
   const [labels, setLabels] = useState<KanbanLabel[]>([]);
-  const [selectedCardDetails, setSelectedCardDetails] = useState<any | null>(null);
+  const [archivedColumns, setArchivedColumns] = useState<KanbanColumn[]>([]);
+  const [archivedCards, setArchivedCards] = useState<KanbanCard[]>([]);
+  const [customFields, setCustomFields] = useState<KanbanCustomField[]>([]);
+  const [selectedCardDetails, setSelectedCardDetails] = useState<KanbanCardDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newColumnName, setNewColumnName] = useState("");
@@ -66,15 +93,27 @@ export function KanbanBoard({ projectId, canManage }: Props) {
   const [cardDraftDescriptions, setCardDraftDescriptions] = useState<DraftMap>({});
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState("#2563EB");
+  const [customFieldDraft, setCustomFieldDraft] = useState<{ name: string; type: KanbanCustomField['type']; required: boolean }>(
+    { name: "", type: "TEXT", required: false }
+  );
+  const [newChecklistTitle, setNewChecklistTitle] = useState("");
+  const [checklistItemDrafts, setChecklistItemDrafts] = useState<Record<string, string>>({});
+  const [showProjectSettings, setShowProjectSettings] = useState(false);
+  const [newCommentBody, setNewCommentBody] = useState("");
+  const [showAddColumnModal, setShowAddColumnModal] = useState(false);
 
   useEffect(() => {
     let active = true;
     async function load() {
       try {
         const payload = await fetchBoard(projectId);
+        const fields = await listCustomFields(projectId);
         if (active) {
           setColumns(payload.board);
           setLabels(payload.labels ?? []);
+          setArchivedColumns(payload.archivedColumns ?? []);
+          setArchivedCards(payload.archivedCards ?? []);
+          setCustomFields(fields ?? []);
           setNewColumnColor(paletteColor((payload.board ?? []).length));
         }
       } catch {
@@ -93,6 +132,271 @@ export function KanbanBoard({ projectId, canManage }: Props) {
     };
   }, [projectId]);
 
+  // Prevent background scroll when any modal is open
+  useEffect(() => {
+    const hasModalOpen = Boolean(selectedCardDetails) || Boolean(showProjectSettings) || Boolean(showAddColumnModal);
+    const original = document.body.style.overflow;
+    if (hasModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = original || "";
+    }
+    return () => {
+      document.body.style.overflow = original || "";
+    };
+  }, [selectedCardDetails, showProjectSettings, showAddColumnModal]);
+
+  async function refreshBoard() {
+    try {
+      const payload = await fetchBoard(projectId);
+      const fields = await listCustomFields(projectId);
+      setColumns(payload.board);
+      setLabels(payload.labels ?? []);
+      setArchivedColumns(payload.archivedColumns ?? []);
+      setArchivedCards(payload.archivedCards ?? []);
+      setCustomFields(fields ?? []);
+      setNewColumnColor(paletteColor((payload.board ?? []).length));
+    } catch {
+      setError("Nao foi possivel atualizar o quadro.");
+    }
+  }
+
+  async function refreshCardDetails(cardId: string) {
+    try {
+      const details = await fetchCardDetails(projectId, cardId);
+      setSelectedCardDetails(details);
+    } catch {
+      setError('Nao foi possivel atualizar os detalhes do cartao.');
+    }
+  }
+
+  // Bulk actions removed from UI per request
+
+  async function handleRestoreArchivedCard(cardId: string) {
+    try {
+      await restoreCard(projectId, cardId);
+      await refreshBoard();
+    } catch {
+      setError('Nao foi possivel restaurar o cartao.');
+    }
+  }
+
+  async function handleRestoreArchivedColumn(columnId: string) {
+    try {
+      await restoreColumn(projectId, columnId);
+      await refreshBoard();
+    } catch {
+      setError('Nao foi possivel restaurar a coluna.');
+    }
+  }
+
+  async function handleCreateCustomField() {
+    if (!canManage) {
+      return;
+    }
+    const name = customFieldDraft.name.trim();
+    if (!name) {
+      return;
+    }
+    try {
+      const created = await createCustomField(projectId, {
+        name,
+        type: customFieldDraft.type,
+        required: customFieldDraft.required,
+      });
+      setCustomFields((current) => [...current, created]);
+      setCustomFieldDraft({ name: "", type: customFieldDraft.type, required: false });
+    } catch {
+      setError('Nao foi possivel criar o campo personalizado.');
+    }
+  }
+
+  async function handleDeleteCustomField(fieldId: string) {
+    if (!canManage) {
+      return;
+    }
+    try {
+      await deleteCustomField(projectId, fieldId);
+      setCustomFields((current) => current.filter((field) => field.id !== fieldId));
+    } catch {
+      setError('Nao foi possivel remover o campo personalizado.');
+    }
+  }
+
+  async function handleCreateChecklistForCard() {
+    if (!selectedCardDetails) {
+      return;
+    }
+    const title = newChecklistTitle.trim();
+    if (!title) {
+      return;
+    }
+    try {
+      await createChecklist(projectId, selectedCardDetails.id, { title });
+      setNewChecklistTitle("");
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel criar a checklist.');
+    }
+  }
+
+  async function handleUpdateChecklistTitle(checklistId: string, title: string) {
+    if (!selectedCardDetails) {
+      return;
+    }
+    try {
+      await updateChecklist(projectId, checklistId, { title });
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel atualizar a checklist.');
+    }
+  }
+
+  async function handleDeleteChecklist(checklistId: string) {
+    if (!selectedCardDetails) {
+      return;
+    }
+    try {
+      await deleteChecklist(projectId, checklistId);
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel remover a checklist.');
+    }
+  }
+
+  async function handleCreateChecklistItem(checklistId: string) {
+    if (!selectedCardDetails) {
+      return;
+    }
+    const draft = checklistItemDrafts[checklistId]?.trim() ?? "";
+    if (!draft) {
+      return;
+    }
+    try {
+      await createChecklistItem(projectId, checklistId, { title: draft });
+      setChecklistItemDrafts((current) => ({ ...current, [checklistId]: "" }));
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel criar o item da checklist.');
+    }
+  }
+
+  async function handleUpdateChecklistItem(itemId: string, updates: Partial<KanbanChecklistItem>) {
+    if (!selectedCardDetails) {
+      return;
+    }
+    try {
+      await updateChecklistItem(projectId, itemId, {
+        title: updates.title,
+        doneAt: updates.doneAt ?? null,
+        assigneeId: updates.assigneeId ?? null,
+        dueDate: updates.dueDate ?? null,
+      });
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel atualizar o item da checklist.');
+    }
+  }
+
+  async function handleDeleteChecklistItem(itemId: string) {
+    if (!selectedCardDetails) {
+      return;
+    }
+    try {
+      await deleteChecklistItem(projectId, itemId);
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel remover o item da checklist.');
+    }
+  }
+
+  async function handleMoveChecklist(checklistId: string, direction: number) {
+    if (!selectedCardDetails) {
+      return;
+    }
+    const checklists = selectedCardDetails.checklists ?? [];
+    const index = checklists.findIndex((c) => c.id === checklistId);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= checklists.length) {
+      return;
+    }
+    const orderedIds = [...checklists];
+    const [moved] = orderedIds.splice(index, 1);
+    orderedIds.splice(targetIndex, 0, moved);
+    try {
+      await reorderChecklists(projectId, selectedCardDetails.id, orderedIds.map((c) => c.id));
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel reordenar as checklists.');
+    }
+  }
+
+  async function handleMoveChecklistItem(checklistId: string, itemId: string, direction: number) {
+    if (!selectedCardDetails) {
+      return;
+    }
+    const checklist = selectedCardDetails.checklists.find((c) => c.id === checklistId);
+    if (!checklist) {
+      return;
+    }
+    const items = checklist.items ?? [];
+    const index = items.findIndex((item) => item.id === itemId);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= items.length) {
+      return;
+    }
+    const orderedIds = [...items];
+    const [moved] = orderedIds.splice(index, 1);
+    orderedIds.splice(targetIndex, 0, moved);
+    try {
+      await reorderChecklistItems(projectId, checklistId, orderedIds.map((item) => item.id));
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel reordenar os itens da checklist.');
+    }
+  }
+
+  async function handlePromoteItem(itemId: string) {
+    if (!selectedCardDetails) {
+      return;
+    }
+    try {
+      await promoteChecklistItem(projectId, itemId);
+      await refreshBoard();
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('WIP')) {
+        setError('Nao foi possivel promover o item: limite WIP atingido.');
+      } else {
+        setError('Nao foi possivel promover o item para subtarefa.');
+      }
+    }
+  }
+
+  async function handleCustomFieldValueChange(fieldId: string, value: unknown) {
+    if (!selectedCardDetails) {
+      return;
+    }
+    setSelectedCardDetails((current) => {
+      if (!current) {
+        return current;
+      }
+      return {
+        ...current,
+        customFields: current.customFields.map((field) => (
+          field.id === fieldId ? { ...field, value } : field
+        )),
+      };
+    });
+    try {
+      await setCardCustomFieldValue(projectId, selectedCardDetails.id, fieldId, value);
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel atualizar o campo personalizado.');
+      await refreshCardDetails(selectedCardDetails.id);
+    }
+  }
+
   async function handleCreateColumn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = newColumnName.trim();
@@ -104,6 +408,7 @@ export function KanbanBoard({ projectId, canManage }: Props) {
       setColumns((current) => [...current, { ...column, cards: [] as KanbanCard[] }]);
       setNewColumnName("");
       setNewColumnColor(paletteColor(columns.length + 1));
+      setShowAddColumnModal(false);
     } catch {
       setError("Nao foi possivel criar a coluna.");
     }
@@ -147,6 +452,7 @@ export function KanbanBoard({ projectId, canManage }: Props) {
     try {
       const details = await fetchCardDetails(projectId, cardId);
       setSelectedCardDetails(details);
+      setNewCommentBody("");
     } catch {
       setError('Nao foi possivel carregar os detalhes do cartao.');
     }
@@ -154,6 +460,19 @@ export function KanbanBoard({ projectId, canManage }: Props) {
 
   function closeCardDetails() {
     setSelectedCardDetails(null);
+  }
+
+  async function handleCreateComment() {
+    if (!selectedCardDetails) return;
+    const body = newCommentBody.trim();
+    if (!body) return;
+    try {
+      await createComment(projectId, selectedCardDetails.id, { body });
+      setNewCommentBody("");
+      await refreshCardDetails(selectedCardDetails.id);
+    } catch {
+      setError('Nao foi possivel adicionar o comentario.');
+    }
   }
 
   function handleCardClick(cardId: string, event: MouseEvent<HTMLDivElement>) {
@@ -179,9 +498,17 @@ export function KanbanBoard({ projectId, canManage }: Props) {
     }
   }
 
-  async function handleDeleteColumn(columnId: string) {
-    await deleteColumn(projectId, columnId);
-    setColumns((current) => current.filter((column) => column.id !== columnId));
+  async function handleArchiveColumn(columnId: string) {
+    try {
+      const column = columns.find((item) => item.id === columnId) ?? null;
+      await archiveColumn(projectId, columnId);
+      setColumns((current) => current.filter((item) => item.id !== columnId));
+      if (column) {
+        setArchivedColumns((current) => [{ ...column, archivedAt: new Date().toISOString() }, ...current]);
+      }
+    } catch {
+      setError('Nao foi possivel arquivar a coluna.');
+    }
   }
 
   function updateCardLocal(columnId: string, cardId: string, data: Partial<KanbanCard>) {
@@ -215,11 +542,24 @@ export function KanbanBoard({ projectId, canManage }: Props) {
     }
   }
 
-  async function handleDeleteCard(columnId: string, cardId: string) {
-    await deleteCard(projectId, cardId);
-    setColumns((current) => current.map((column) => (
-      column.id === columnId ? { ...column, cards: column.cards.filter((card) => card.id !== cardId) } : column
-    )));
+  async function handleArchiveCard(columnId: string, cardId: string) {
+    try {
+      const card = columns
+        .find((col) => col.id === columnId)?.cards
+        .find((item) => item.id === cardId) ?? null;
+      await archiveCard(projectId, cardId);
+      setColumns((current) => current.map((column) => (
+        column.id === columnId ? { ...column, cards: column.cards.filter((item) => item.id !== cardId) } : column
+      )));
+      if (card) {
+        setArchivedCards((current) => [{ ...card, archivedAt: new Date().toISOString() }, ...current]);
+      }
+      if (selectedCardDetails?.id === cardId) {
+        setSelectedCardDetails(null);
+      }
+    } catch {
+      setError('Nao foi possivel arquivar o cartao.');
+    }
   }
 
   function onDragEnd(result: DropResult) {
@@ -277,6 +617,84 @@ export function KanbanBoard({ projectId, canManage }: Props) {
     }
   }
 
+  const cardChecklists: KanbanChecklist[] = selectedCardDetails?.checklists ?? [];
+  const cardComments = selectedCardDetails?.comments ?? [];
+  const cardActivity = selectedCardDetails?.activity ?? [];
+  const cardSubtasks = selectedCardDetails?.subtasks ?? [];
+
+  const cardCustomFields: KanbanCustomField[] = selectedCardDetails
+    ? (selectedCardDetails.customFields && selectedCardDetails.customFields.length > 0
+      ? selectedCardDetails.customFields
+      : customFields.map((field) => ({ ...field, value: null })))
+    : [];
+
+    function renderCustomFieldInput(field: KanbanCustomField) {
+      const key = `${field.id}-input`;
+      if (field.type === "BOOLEAN") {
+        return (
+          <input
+            key={key}
+            type="checkbox"
+            checked={Boolean(field.value)}
+            onChange={(event) => handleCustomFieldValueChange(field.id, event.target.checked)}
+          />
+        );
+      }
+
+      if (field.type === "LIST" && Array.isArray(field.options) && field.options.length > 0) {
+        const current = Array.isArray(field.value) ? field.value[0] ?? "" : field.value ?? "";
+        return (
+          <select
+            key={key}
+            value={current}
+            onChange={(event) => handleCustomFieldValueChange(field.id, event.target.value ? event.target.value : null)}
+          >
+            <option value="">Selecionar...</option>
+            {field.options.map((option: any) => (
+              <option key={String(option)} value={String(option)}>{String(option)}</option>
+            ))}
+          </select>
+        );
+      }
+
+      if (field.type === "DATE") {
+        const current = field.value ? new Date(field.value as string).toISOString().slice(0, 10) : "";
+        return (
+          <input
+            key={key}
+            type="date"
+            defaultValue={current}
+            onBlur={(event) => handleCustomFieldValueChange(field.id, event.target.value || null)}
+          />
+        );
+      }
+
+      if (field.type === "NUMBER") {
+        const current = typeof field.value === "number" ? field.value : field.value ? Number(field.value) : "";
+        return (
+          <input
+            key={key}
+            type="number"
+            defaultValue={current as number | string}
+            onBlur={(event) => {
+              const value = event.target.value.trim();
+              handleCustomFieldValueChange(field.id, value ? Number(value) : null);
+            }}
+          />
+        );
+      }
+
+      const current = typeof field.value === "string" ? field.value : field.value ? String(field.value) : "";
+      return (
+        <input
+          key={key}
+          type="text"
+          defaultValue={current}
+          onBlur={(event) => handleCustomFieldValueChange(field.id, event.target.value)}
+        />
+      );
+    }
+
   if (loading) {
     return <div className="card">Montando o quadro Kanban...</div>;
   }
@@ -285,39 +703,16 @@ export function KanbanBoard({ projectId, canManage }: Props) {
     <div className="kanban">
       {error && <p className="form-error">{error}</p>}
       <div className="kanban-toolbar">
-        <section className="labels-panel">
-          <div className="labels-panel-header">
-            <h3>Etiquetas do projeto</h3>
-            <p className="labels-panel-subtitle">Use cores para destacar tipos de tarefa.</p>
+        {canManage && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem' }}>
+            <button className="btn" type="button" onClick={() => setShowProjectSettings(true)}>
+              Configuracoes
+            </button>
+            <button className="btn ghost" type="button" onClick={() => setShowAddColumnModal(true)}>
+              Nova coluna
+            </button>
           </div>
-          <div className="labels-list">
-            {labels.length === 0 && <span className="muted">Nenhuma etiqueta cadastrada ainda.</span>}
-            {labels.map((label) => (
-              <span key={label.id} className="label-chip" style={{ background: label.color }}>
-                {label.name}
-              </span>
-            ))}
-          </div>
-          {canManage && (
-            <form className="label-form" onSubmit={handleLabelSubmit}>
-              <input
-                className="input"
-                placeholder="Nome da etiqueta"
-                value={newLabelName}
-                onChange={(event) => setNewLabelName(event.target.value)}
-              />
-              <label className="label-color-picker">
-                Cor
-                <input
-                  type="color"
-                  value={newLabelColor}
-                  onChange={(event) => setNewLabelColor(event.target.value || "#2563EB")}
-                />
-              </label>
-              <button className="btn secondary" type="submit">Criar etiqueta</button>
-            </form>
-          )}
-        </section>
+        )}
       </div>
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="kanban-board">
@@ -359,7 +754,7 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                                     persistColumn(column.id, { color: value });
                                   }}
                                 />
-                                <button className="link-button" onClick={() => handleDeleteColumn(column.id)}>Excluir</button>
+                                <button className="link-button" onClick={() => handleArchiveColumn(column.id)}>Arquivar</button>
                               </div>
                             )}
                           </div>
@@ -377,6 +772,7 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                                           style={{ ...cardDragProvided.draggableProps.style, background: cardBackground, borderColor: cardBorderColor }}
                                           onClick={(event) => handleCardClick(card.id, event)}
                                         >
+                                          {/* Bulk selection removed per request */}
                                           <div className="card-handle" {...cardDragProvided.dragHandleProps}>
                                             <span className="grip" aria-hidden="true">: :</span>
                                           </div>
@@ -402,10 +798,10 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                                                 className="link-button"
                                                 onClick={(event) => {
                                                   event.stopPropagation();
-                                                  handleDeleteCard(column.id, card.id);
+                                                  handleArchiveCard(column.id, card.id);
                                                 }}
                                               >
-                                                Remover
+                                                Arquivar
                                               </button>
                                             </div>
                                           </div>
@@ -444,49 +840,342 @@ export function KanbanBoard({ projectId, canManage }: Props) {
               </div>
             )}
           </Droppable>
-          <form className="new-column" onSubmit={handleCreateColumn}>
-            <input
-              className="input"
-              placeholder="Nova coluna"
-              value={newColumnName}
-              onChange={(event) => setNewColumnName(event.target.value)}
-            />
-            <label className="color-picker-label">
-              Cor
-              <input
-                className="color-input"
-                type="color"
-                value={newColumnColor}
-                onChange={(event) => setNewColumnColor(event.target.value || paletteColor(columns.length))}
-              />
-            </label>
-            <button className="btn secondary" type="submit">Adicionar coluna</button>
-          </form>
+          {/* Add-column form moved to modal */}
         </div>
       </DragDropContext>
+      {canManage && showAddColumnModal && (
+        <div className="modal-overlay" role="presentation" onClick={() => setShowAddColumnModal(false)}>
+          <div
+            className="add-column-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Adicionar coluna"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="project-settings-header">
+              <h3>Adicionar coluna</h3>
+              <button className="btn ghost" type="button" onClick={() => setShowAddColumnModal(false)}>Fechar</button>
+            </div>
+            <form className="label-form" onSubmit={handleCreateColumn}>
+              <input
+                className="input"
+                placeholder="Nome da coluna"
+                value={newColumnName}
+                onChange={(event) => setNewColumnName(event.target.value)}
+              />
+              <label className="label-color-picker">
+                Cor
+                <input
+                  className="color-input"
+                  type="color"
+                  value={newColumnColor}
+                  onChange={(event) => setNewColumnColor(event.target.value || paletteColor(columns.length))}
+                />
+              </label>
+              <button className="btn secondary" type="submit">Adicionar</button>
+            </form>
+          </div>
+        </div>
+      )}
+      {canManage && showProjectSettings && (
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onClick={() => setShowProjectSettings(false)}
+        >
+          <div
+            className="project-settings-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Configuracoes do projeto"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="project-settings-header">
+              <div>
+                <h3>Configuracoes do projeto</h3>
+                <p className="muted">Gerencie etiquetas e campos personalizados deste quadro.</p>
+              </div>
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={() => setShowProjectSettings(false)}
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="project-settings-body">
+              <section className="modal-section">
+                <h4>Nova etiqueta</h4>
+                <p className="muted">Crie etiquetas com cores para destacar tipos de tarefa.</p>
+                <form className="label-form" onSubmit={handleLabelSubmit}>
+                  <input
+                    className="input"
+                    placeholder="Nome da etiqueta"
+                    value={newLabelName}
+                    onChange={(event) => setNewLabelName(event.target.value)}
+                  />
+                  <label className="label-color-picker">
+                    Cor
+                    <input
+                      type="color"
+                      value={newLabelColor}
+                      onChange={(event) => setNewLabelColor(event.target.value || "#2563EB")}
+                    />
+                  </label>
+                  <button className="btn secondary" type="submit">Criar etiqueta</button>
+                </form>
+                <div className="labels-list">
+                  {labels.length === 0 && <span className="muted">Nenhuma etiqueta cadastrada ainda.</span>}
+                  {labels.map((label) => (
+                    <span key={label.id} className="label-chip" style={{ background: label.color }}>
+                      {label.name}
+                    </span>
+                  ))}
+                </div>
+              </section>
+              <section className="modal-section">
+                <h4>Novo campo personalizado</h4>
+                <p className="muted">Campos ajudam a capturar informacoes especificas de cada cartao.</p>
+                <div className="custom-field-form">
+                  <input
+                    className="input"
+                    placeholder="Nome do campo"
+                    value={customFieldDraft.name}
+                    onChange={(event) => setCustomFieldDraft((current) => ({ ...current, name: event.target.value }))}
+                  />
+                  <select
+                    className="input"
+                    value={customFieldDraft.type}
+                    onChange={(event) => setCustomFieldDraft((current) => ({ ...current, type: event.target.value as KanbanCustomField['type'] }))}
+                  >
+                    <option value="TEXT">Texto</option>
+                    <option value="NUMBER">Numero</option>
+                    <option value="DATE">Data</option>
+                    <option value="LIST">Lista</option>
+                    <option value="BOOLEAN">Booleano</option>
+                  </select>
+                  <label className="checkbox-inline">
+                    <input
+                      type="checkbox"
+                      checked={customFieldDraft.required}
+                      onChange={(event) => setCustomFieldDraft((current) => ({ ...current, required: event.target.checked }))}
+                    />
+                    Obrigatorio
+                  </label>
+                  <button className="btn secondary" type="button" onClick={handleCreateCustomField}>Adicionar campo</button>
+                </div>
+                {customFields.length > 0 && (
+                  <ul className="custom-field-list">
+                    {customFields.map((field) => (
+                      <li key={field.id}>
+                        <span>{field.name} ({field.type.toLowerCase()})</span>
+                        <button className="link-button" onClick={() => handleDeleteCustomField(field.id)}>Remover</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {customFields.length === 0 && <span className="muted">Nenhum campo cadastrado.</span>}
+              </section>
+              <section className="modal-section">
+                <h4>Colunas arquivadas</h4>
+                {archivedColumns.length === 0 && <span className="muted">Nenhuma coluna arquivada.</span>}
+                {archivedColumns.length > 0 && (
+                  <ul className="archived-list">
+                    {archivedColumns.map((column) => (
+                      <li key={column.id}>
+                        <span>{column.name}</span>
+                        <button className="link-button" onClick={() => handleRestoreArchivedColumn(column.id)}>Restaurar</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section className="modal-section">
+                <h4>Cartoes arquivados recentes</h4>
+                {archivedCards.length === 0 && <span className="muted">Nenhum cartao arquivado.</span>}
+                {archivedCards.length > 0 && (
+                  <ul className="archived-list">
+                    {archivedCards.slice(0, 10).map((card) => (
+                      <li key={card.id}>
+                        <span>{card.title}</span>
+                        <button className="link-button" onClick={() => handleRestoreArchivedCard(card.id)}>Restaurar</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
       {selectedCardDetails && (
         <div className="card-details-modal">
           <div className="card-details">
-            <h3>{selectedCardDetails.title}</h3>
-            <p>{selectedCardDetails.description}</p>
-            <div>
+            <div className="card-details-header">
+              <div>
+                <h3>{selectedCardDetails.title}</h3>
+                <p className="muted">Coluna: {columns.find((column) => column.id === selectedCardDetails.columnId)?.name ?? 'Desconhecida'}</p>
+              </div>
+              <div className="card-details-actions">
+                <button
+                  className="btn ghost"
+                  onClick={() => handleArchiveCard(selectedCardDetails.columnId, selectedCardDetails.id)}
+                >
+                  Arquivar cartao
+                </button>
+                <button className="btn" onClick={closeCardDetails}>Fechar</button>
+              </div>
+            </div>
+            <section className="card-section">
+              <h4>Descricao</h4>
+              <textarea
+                className="input"
+                value={selectedCardDetails.description ?? ""}
+                onChange={(event) => setSelectedCardDetails((current) => current ? { ...current, description: event.target.value } : current)}
+                onBlur={(event) => persistCard(selectedCardDetails.id, selectedCardDetails.columnId, { description: event.target.value })}
+                placeholder="Adicione detalhes da tarefa"
+              />
+            </section>
+            <section className="card-section">
+              <h4>Campos personalizados</h4>
+              {cardCustomFields.length === 0 && <p className="muted">Nenhum campo configurado.</p>}
+              {cardCustomFields.length > 0 && (
+                <div className="custom-field-grid">
+                  {cardCustomFields.map((field) => (
+                    <label key={field.id} className="custom-field-control">
+                      <span>{field.name}</span>
+                      {renderCustomFieldInput(field)}
+                    </label>
+                  ))}
+                </div>
+              )}
+              {canManage && (
+                <div>
+                  <button className="btn ghost" type="button" onClick={() => setShowProjectSettings(true)}>
+                    Adicionar campo personalizado
+                  </button>
+                </div>
+              )}
+            </section>
+            <section className="card-section">
+              <h4>Checklists</h4>
+              <form
+                className="inline-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleCreateChecklistForCard();
+                }}
+              >
+                <input
+                  className="input"
+                  placeholder="Nova checklist"
+                  value={newChecklistTitle}
+                  onChange={(event) => setNewChecklistTitle(event.target.value)}
+                />
+                <button className="btn secondary" type="submit">Adicionar</button>
+              </form>
+              {cardChecklists.length === 0 && <p className="muted">Nenhuma checklist criada.</p>}
+              {cardChecklists.map((checklist, checklistIndex) => (
+                <div key={checklist.id} className="checklist-block">
+                  <div className="checklist-header">
+                    <input
+                      className="input checklist-title"
+                      defaultValue={checklist.title}
+                      onBlur={(event) => handleUpdateChecklistTitle(checklist.id, event.target.value)}
+                    />
+                    <div className="checklist-actions">
+                      <button className="link-button" onClick={() => handleMoveChecklist(checklist.id, -1)} disabled={checklistIndex === 0}>Subir</button>
+                      <button className="link-button" onClick={() => handleMoveChecklist(checklist.id, 1)} disabled={checklistIndex === cardChecklists.length - 1}>Descer</button>
+                      <button className="link-button" onClick={() => handleDeleteChecklist(checklist.id)}>Excluir</button>
+                    </div>
+                  </div>
+                  <ul className="checklist-items">
+                    {checklist.items.map((item, itemIndex) => (
+                      <li key={item.id} className="checklist-item">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(item.doneAt)}
+                          onChange={(event) => handleUpdateChecklistItem(item.id, { doneAt: event.target.checked ? new Date().toISOString() : null })}
+                        />
+                        <span
+                          className="checklist-item-title"
+                          style={{ textDecoration: item.doneAt ? 'line-through' : undefined }}
+                        >
+                          {item.title}
+                        </span>
+                        <div className="checklist-item-actions">
+                          <button className="link-button" onClick={() => handleMoveChecklistItem(checklist.id, item.id, -1)} disabled={itemIndex === 0}>↑</button>
+                          <button className="link-button" onClick={() => handleMoveChecklistItem(checklist.id, item.id, 1)} disabled={itemIndex === checklist.items.length - 1}>↓</button>
+                          <button className="link-button" onClick={() => handlePromoteItem(item.id)}>Promover</button>
+                          <button className="link-button" onClick={() => handleDeleteChecklistItem(item.id)}>Remover</button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <form
+                    className="inline-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      // Clear immediately for snappier UX
+                      setChecklistItemDrafts((draft) => ({ ...draft, [checklist.id]: "" }));
+                      handleCreateChecklistItem(checklist.id);
+                    }}
+                  >
+                    <input
+                      className="input"
+                      placeholder="Novo item"
+                      value={checklistItemDrafts[checklist.id] ?? ""}
+                      onChange={(event) => setChecklistItemDrafts((draft) => ({ ...draft, [checklist.id]: event.target.value }))}
+                    />
+                    <button className="btn ghost" type="submit">Adicionar item</button>
+                  </form>
+                </div>
+              ))}
+            </section>
+            {cardSubtasks.length > 0 && (
+              <section className="card-section">
+                <h4>Subtarefas</h4>
+                <ul className="subtask-list">
+                  {cardSubtasks.map((subtask) => (
+                    <li key={subtask.id}>
+                      <button className="link-button" onClick={() => openCardDetails(subtask.id)}>{subtask.title}</button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            <section className="card-section">
               <h4>Comentarios</h4>
-              {selectedCardDetails.comments?.map((c: any) => (
-                <div key={c.id} className="comment">
-                  <strong>{c.authorName ?? c.authorId}</strong>
-                  <p>{c.body}</p>
+              {cardComments.length === 0 && <p className="muted">Nenhum comentario ainda.</p>}
+              {cardComments.map((comment) => (
+                <div key={comment.id} className="comment">
+                  <strong>{comment.authorName ?? comment.authorId}</strong>
+                  <p>{comment.body}</p>
                 </div>
               ))}
-            </div>
-            <div>
+              <form
+                className="inline-form"
+                onSubmit={(e) => { e.preventDefault(); handleCreateComment(); }}
+              >
+                <input
+                  className="input"
+                  placeholder="Escreva um comentario"
+                  value={newCommentBody}
+                  onChange={(e) => setNewCommentBody(e.target.value)}
+                />
+                <button className="btn secondary" type="submit">Adicionar comentario</button>
+              </form>
+            </section>
+            <section className="card-section">
               <h4>Atividade</h4>
-              {selectedCardDetails.activity?.map((a: any) => (
-                <div key={a.id} className="activity">
-                  <small>{a.type} - {new Date(a.createdAt).toLocaleString()}</small>
+              {cardActivity.length === 0 && <p className="muted">Sem atividades registradas.</p>}
+              {cardActivity.map((activity) => (
+                <div key={activity.id} className="activity">
+                  <small>{activity.type} · {new Date(activity.createdAt).toLocaleString()}</small>
                 </div>
               ))}
-            </div>
-            <div style={{ textAlign: 'right' }}>
+            </section>
+            <div className="card-details-footer">
               <button className="btn" onClick={closeCardDetails}>Fechar</button>
             </div>
           </div>
