@@ -61,12 +61,49 @@ export type GeneralDocument = {
   updatedAt: string;
 };
 
+export type KanbanLabel = {
+  id: string;
+  projectId: string;
+  name: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type KanbanAssignee = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+export type KanbanActivity = {
+  id: string;
+  cardId: string;
+  actorId: string;
+  actorName?: string;
+  type: string;
+  data: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type KanbanComment = {
+  id: string;
+  cardId: string;
+  authorId: string;
+  authorName?: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type KanbanColumn = {
   id: string;
   projectId: string;
   name: string;
   position: number;
   color: string;
+  wipLimit: number | null;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
   cards: KanbanCard[];
@@ -81,4 +118,17 @@ export type KanbanCard = {
   position: number;
   createdAt: string;
   updatedAt: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | null;
+  startDate: string | null;
+  dueDate: string | null;
+  completedAt: string | null;
+  archivedAt: string | null;
+  labels: KanbanLabel[];
+  assignees: KanbanAssignee[];
+  commentsCount: number;
+};
+
+export type KanbanCardDetails = KanbanCard & {
+  comments: KanbanComment[];
+  activity: KanbanActivity[];
 };

@@ -127,7 +127,7 @@ export function ProjectPage() {
       )}
       {view === "kanban" && (
         <div className="card">
-          <KanbanBoard projectId={projectId} canManage={isManager} />
+          <KanbanBoard projectId={projectId} canManage={isManager} userDirectory={userDirectory} />
         </div>
       )}
     </div>

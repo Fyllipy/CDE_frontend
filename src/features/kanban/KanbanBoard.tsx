@@ -1,7 +1,7 @@
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
 import { useEffect, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FormEvent, MouseEvent } from "react";
 import {
   createCard,
   createColumn,
@@ -12,14 +12,17 @@ import {
   reorderCards,
   reorderColumns,
   updateCard,
-  updateColumn
+  updateColumn,
+  createLabel,
+  fetchCardDetails,
 } from "../../api/kanban";
-import type { KanbanCard, KanbanColumn } from "../../types/api";
+import type { KanbanCard, KanbanColumn, KanbanLabel } from "../../types/api";
 import "./KanbanBoard.css";
 
 type Props = {
   projectId: string;
   canManage: boolean;
+  userDirectory?: Record<string, { name: string; email: string }>;
 };
 
 type DraftMap = Record<string, string>;
@@ -53,21 +56,26 @@ function columnColor(column: KanbanColumn, index: number): string {
 
 export function KanbanBoard({ projectId, canManage }: Props) {
   const [columns, setColumns] = useState<KanbanColumn[]>([]);
+  const [labels, setLabels] = useState<KanbanLabel[]>([]);
+  const [selectedCardDetails, setSelectedCardDetails] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newColumnName, setNewColumnName] = useState("");
   const [newColumnColor, setNewColumnColor] = useState(paletteColor(0));
   const [cardDraftTitles, setCardDraftTitles] = useState<DraftMap>({});
   const [cardDraftDescriptions, setCardDraftDescriptions] = useState<DraftMap>({});
+  const [newLabelName, setNewLabelName] = useState("");
+  const [newLabelColor, setNewLabelColor] = useState("#2563EB");
 
   useEffect(() => {
     let active = true;
     async function load() {
       try {
-        const board = await fetchBoard(projectId);
+        const payload = await fetchBoard(projectId);
         if (active) {
-          setColumns(board);
-          setNewColumnColor(paletteColor(board.length));
+          setColumns(payload.board);
+          setLabels(payload.labels ?? []);
+          setNewColumnColor(paletteColor((payload.board ?? []).length));
         }
       } catch {
         if (active) {
@@ -118,6 +126,42 @@ export function KanbanBoard({ projectId, canManage }: Props) {
     } catch {
       setError("Nao foi possivel criar o cartao.");
     }
+  }
+
+  async function handleLabelSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = newLabelName.trim();
+    if (!name) {
+      return;
+    }
+    try {
+      const label = await createLabel(projectId, { name, color: newLabelColor });
+      setLabels((curr) => [...curr, label]);
+      setNewLabelName("");
+    } catch {
+      setError('Nao foi possivel criar a etiqueta. Verifique suas permissoes.');
+    }
+  }
+
+  async function openCardDetails(cardId: string) {
+    try {
+      const details = await fetchCardDetails(projectId, cardId);
+      setSelectedCardDetails(details);
+    } catch {
+      setError('Nao foi possivel carregar os detalhes do cartao.');
+    }
+  }
+
+  function closeCardDetails() {
+    setSelectedCardDetails(null);
+  }
+
+  function handleCardClick(cardId: string, event: MouseEvent<HTMLDivElement>) {
+    const element = event.target as HTMLElement | null;
+    if (element?.closest("textarea, button, input, a")) {
+      return;
+    }
+    openCardDetails(cardId);
   }
 
   function updateColumnLocal(columnId: string, data: Partial<KanbanColumn>) {
@@ -240,6 +284,41 @@ export function KanbanBoard({ projectId, canManage }: Props) {
   return (
     <div className="kanban">
       {error && <p className="form-error">{error}</p>}
+      <div className="kanban-toolbar">
+        <section className="labels-panel">
+          <div className="labels-panel-header">
+            <h3>Etiquetas do projeto</h3>
+            <p className="labels-panel-subtitle">Use cores para destacar tipos de tarefa.</p>
+          </div>
+          <div className="labels-list">
+            {labels.length === 0 && <span className="muted">Nenhuma etiqueta cadastrada ainda.</span>}
+            {labels.map((label) => (
+              <span key={label.id} className="label-chip" style={{ background: label.color }}>
+                {label.name}
+              </span>
+            ))}
+          </div>
+          {canManage && (
+            <form className="label-form" onSubmit={handleLabelSubmit}>
+              <input
+                className="input"
+                placeholder="Nome da etiqueta"
+                value={newLabelName}
+                onChange={(event) => setNewLabelName(event.target.value)}
+              />
+              <label className="label-color-picker">
+                Cor
+                <input
+                  type="color"
+                  value={newLabelColor}
+                  onChange={(event) => setNewLabelColor(event.target.value || "#2563EB")}
+                />
+              </label>
+              <button className="btn secondary" type="submit">Criar etiqueta</button>
+            </form>
+          )}
+        </section>
+      </div>
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="kanban-board">
           <Droppable droppableId="board" direction="horizontal" type="COLUMN">
@@ -296,6 +375,7 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                                           ref={cardDragProvided.innerRef}
                                           {...cardDragProvided.draggableProps}
                                           style={{ ...cardDragProvided.draggableProps.style, background: cardBackground, borderColor: cardBorderColor }}
+                                          onClick={(event) => handleCardClick(card.id, event)}
                                         >
                                           <div className="card-handle" {...cardDragProvided.dragHandleProps}>
                                             <span className="grip" aria-hidden="true">: :</span>
@@ -313,10 +393,20 @@ export function KanbanBoard({ projectId, canManage }: Props) {
                                             onChange={(event) => updateCardLocal(column.id, card.id, { description: event.target.value })}
                                             onBlur={(event) => persistCard(card.id, column.id, { description: event.target.value })}
                                           />
-                                          <div className="card-actions">
-                                            <span className="badge">Posicao {cardIndex + 1}</span>
-                                            <div className="card-tools">
-                                              <button className="link-button" onClick={() => handleDeleteCard(column.id, card.id)}>Remover</button>
+                                          <div className="card-actions" onClick={(event) => event.stopPropagation()}>
+                                            <span className="badge" onClick={(event) => event.stopPropagation()}>Posicao {cardIndex + 1}</span>
+                                            <span className="badge" onClick={(event) => event.stopPropagation()}>Etiquetas: {card.labels ? card.labels.length : 0}</span>
+                                            <span className="badge" onClick={(event) => event.stopPropagation()}>Atribuidos: {card.assignees ? card.assignees.length : 0}</span>
+                                            <div className="card-tools" onClick={(event) => event.stopPropagation()}>
+                                              <button
+                                                className="link-button"
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  handleDeleteCard(column.id, card.id);
+                                                }}
+                                              >
+                                                Remover
+                                              </button>
                                             </div>
                                           </div>
                                         </div>
@@ -374,6 +464,34 @@ export function KanbanBoard({ projectId, canManage }: Props) {
           </form>
         </div>
       </DragDropContext>
+      {selectedCardDetails && (
+        <div className="card-details-modal">
+          <div className="card-details">
+            <h3>{selectedCardDetails.title}</h3>
+            <p>{selectedCardDetails.description}</p>
+            <div>
+              <h4>Comentarios</h4>
+              {selectedCardDetails.comments?.map((c: any) => (
+                <div key={c.id} className="comment">
+                  <strong>{c.authorName ?? c.authorId}</strong>
+                  <p>{c.body}</p>
+                </div>
+              ))}
+            </div>
+            <div>
+              <h4>Atividade</h4>
+              {selectedCardDetails.activity?.map((a: any) => (
+                <div key={a.id} className="activity">
+                  <small>{a.type} - {new Date(a.createdAt).toLocaleString()}</small>
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <button className="btn" onClick={closeCardDetails}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
